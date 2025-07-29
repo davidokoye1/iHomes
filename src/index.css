@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors */
+  --color-primary: #7fd783;
+  --color-background: #feffea;
+
+  /* Font Family */
+  --font-sans: Inter, sans-serif;
+}
+
+/* Base styles applying the theme */
+@layer base {
+  body {
+    background-color: var(--color-background);
+    @apply bg-[--color-background] font-sans;
+    color: rgb(17, 24, 39); /* Tailwind's gray-900 default */
+    margin:  18px auto;
+    max-width: 1313px;
+  }
+}

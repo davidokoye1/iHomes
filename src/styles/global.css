@@ -1,0 +1,116 @@
+/* === Buttons === */
+.colored-button {
+  padding: 22px 28px;
+  border-radius: 360px;
+  background: linear-gradient(to bottom, #bdf99a, #5dd27c);
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+}
+
+.search-button {
+  padding: 24px 48px;
+  border-radius: 360px;
+  background: linear-gradient(to bottom, #bdf99a, #5dd27c);
+}
+
+.white-button {
+  padding: 18px 20px;
+  border: 2px solid #000000;
+  border-radius: 360px;
+  background: #ffffff;
+  color: #000000;
+  transition: background-color 0.3s ease;
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+}
+
+.viewAll {
+  padding: 16px 24px;
+  overflow: hidden;
+  border-radius: 360px;
+  background: #ffffff;
+  border: 2px solid #bcbcbc;
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+  color: #000000;
+}
+
+.black-button {
+  padding: 18px 48px;
+  border-radius: 16px;
+  background: #000000;
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.naked-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+  text-align: left;
+  color: #ffffff;
+  text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* === Other Elements === */
+.base-styles {
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 21px;
+  white-space: nowrap;
+  /* ❌ Removed color: #ffffff; */
+}
+
+/* ✅ Explicitly define correct text colors per variant */
+.white-button,
+.viewAll {
+  color: #000000;
+}
+
+.black-button,
+.colored-button,
+.naked-button {
+  color: #ffffff;
+}
+
+.featured-badge {
+  padding: 12px 16px;
+  border-radius: 360px;
+  background: #ffffff;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  line-height: 14px;
+  white-space: nowrap;
+  color: #000000;
+}
+
+.search-bar {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 360px;
+  background: #ffffff;
+  border: 2px solid #d2d2d2;
+}
+
+.heading1 {
+  font-size: 36px;
+  line-height: 43px;
+  white-space: nowrap;
+  color: #000000;
+}
+
+h2 {
+  font-size: 28px;
+  line-height: 38px;
+  white-space: nowrap;
+  font-weight: 500;
+}
