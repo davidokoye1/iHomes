@@ -643,10 +643,12 @@ export default function Dashboard() {
                   </Button>
                 </Link>
                 {user.role === 'admin' && (
-                  <Button variant="white" className="w-full justify-start">
-                    <Users className="h-4 w-4 mr-2" />
-                    Manage Users
-                  </Button>
+                  <Link to="/admin" className="block">
+                    <Button variant="white" className="w-full justify-start">
+                      <Users className="h-4 w-4 mr-2" />
+                      Admin Panel
+                    </Button>
+                  </Link>
                 )}
               </div>
             </div>

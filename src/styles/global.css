@@ -13,10 +13,20 @@
   border-radius: 360px;
   background: linear-gradient(to bottom, #bdf99a, #5dd27c);
 }
+/* Outer container with rounded corners */
+.rounded-outer {
+  border-radius: 32px; /* Adjust this value to control the roundness */
+  overflow: hidden; /* Prevents inner images from overflowing the rounded corners */
+  background-color: #f5f5f5; /* Optional: Adds a light background for contrast */
+}
 
+/* Inner images with sharp corners */
+.sharp-inner {
+  border-radius: 0 !important; /* Ensures no rounding on inner images */
+}
 .white-button {
   padding: 18px 20px;
-  border: 2px solid #000000;
+  border: 2px solid #5DD27C;
   border-radius: 360px;
   background: #ffffff;
   color: #000000;

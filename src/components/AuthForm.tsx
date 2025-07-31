@@ -12,7 +12,7 @@ interface AuthFormProps {
   mode: "login" | "signup";
 }
 
-type UserRole = 'user' | 'agent' | 'admin';
+type UserRole = 'user' | 'agent';
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const [formData, setFormData] = useState({
@@ -24,7 +24,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     role: "user" as UserRole,
   });
 
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 

@@ -9,6 +9,8 @@ import PropertyDetails from './pages/PropertyDetails'
 import PropertyUpload from './pages/PropertyUpload'
 import ProtectedRoute from './components/ProtectedRoute'
 import EmailConfirmation from './pages/EmailConfirmation'
+import MockPage from './pages/MockPage'
+import AdminPanel from './pages/AdminPanel'
 function App() {
   return (
     <Routes>
@@ -19,6 +21,9 @@ function App() {
       <Route path="/email-confirmation" element={<EmailConfirmation />} />
       <Route path="/search" element={<SearchResults />} />
       <Route path="/property/:id" element={<PropertyDetails />} />
+      <Route path="/mock" element={<MockPage />} />
+      
+      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -32,6 +37,14 @@ function App() {
         element={
           <ProtectedRoute>
             <PropertyUpload />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminPanel />
           </ProtectedRoute>
         }
       />
