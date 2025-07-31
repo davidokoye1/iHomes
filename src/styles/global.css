@@ -40,7 +40,7 @@
 
 .black-button {
   padding: 18px 48px;
-  border-radius: 16px;
+  border-radius: 360px;
   background: #000000;
   font-size: 18px;
   line-height: 21px;
@@ -95,7 +95,7 @@
 
 .search-bar {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 360px;
   background: #ffffff;
   border: 2px solid #d2d2d2;

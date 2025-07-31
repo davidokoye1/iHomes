@@ -12,9 +12,9 @@ interface RoleSelectProps {
 }
 
 const roleOptions: Option[] = [
-  { value: "User", label: "User" },
-  { value: "Admin", label: "Admin" },
-  { value: "Agent", label: "Agent" },
+  { value: "user", label: "User" },
+  { value: "admin", label: "Admin" },
+  { value: "agent", label: "Agent" },
 ];
 
 const customStyles = {

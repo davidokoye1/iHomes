@@ -1,29 +1,50 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
+import type { PropertyType, ListingType } from "../types/database";
 
 interface ListingCardProps {
+  id?: string;
   imageUrl: string;
   price: string;
   bedrooms: number;
   bathrooms: number;
   addressLine1: string;
   addressLine2: string;
+  propertyType?: PropertyType;
+  listingType?: ListingType;
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({
+  id,
   imageUrl,
   price,
   bedrooms,
   bathrooms,
   addressLine1,
   addressLine2,
+  propertyType,
+  listingType,
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
+  const navigate = useNavigate();
 
-  const toggleFavorite = () => setIsFavorite((prev) => !prev);
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFavorite((prev) => !prev);
+  };
+
+  const handleClick = () => {
+    if (id) {
+      navigate(`/property/${id}`);
+    }
+  };
 
   return (
-    <div className="listing-card w-full max-w-[400px] p-4 flex flex-col gap-4 rounded-xl ">
+    <div
+      className="listing-card w-full max-w-[400px] p-4 flex flex-col gap-4 rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={handleClick}
+    >
       <img
         src={imageUrl}
         alt="Property"

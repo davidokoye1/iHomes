@@ -4,9 +4,11 @@ import { Menu, X } from "lucide-react";
 import Logo from "../assets/Logo.svg";
 import { NAV_LINKS } from "../constants/routes";
 import Button from "./Button";
+import { useSession } from "../hooks/useSession";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const session = useSession();
 
   return (
     <nav className="navbar flex items-center justify-between px-4 py-3 md:px-8 relative">
@@ -27,11 +29,19 @@ const Navbar = () => {
         <Button variant="white" type="button" showIcon>
           USD
         </Button>
-        <Link to="/login">
-          <Button variant="colored" type="button">
-            Log in
-          </Button>
-        </Link>
+        {session ? (
+          <Link to="/dashboard">
+            <Button variant="colored" type="button">
+              Dashboard
+            </Button>
+          </Link>
+        ) : (
+          <Link to="/login">
+            <Button variant="colored" type="button">
+              Log in
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Mobile Menu Button */}
@@ -60,11 +70,19 @@ const Navbar = () => {
             <Button variant="white" type="button" showIcon className="w-full">
               USD
             </Button>
-            <Link to="/login" className="w-full">
-              <Button variant="colored" type="button" className="w-full">
-                Log in
-              </Button>
-            </Link>
+            {session ? (
+              <Link to="/dashboard" className="w-full">
+                <Button variant="colored" type="button" className="w-full">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/login" className="w-full">
+                <Button variant="colored" type="button" className="w-full">
+                  Log in
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}
