@@ -6,6 +6,7 @@ import { Toaster, toast } from "sonner";
 import InputField from "./InputField";
 import RoleSelect from "./RoleSelect";
 import RememberMeCheckbox from "./RememberMeCheckbox";
+import EmailConfirmationNotice from "../pages/EmailConfirmationNotice";
 import "../styles/auth.css";
 
 interface AuthFormProps {
@@ -26,6 +27,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [showEmailNotice, setShowEmailNotice] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,6 +102,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
               role: formData.role,
               organization_name: formData.organizationName.trim() || null,
             },
+            // Ensure email confirmation is required
+            emailRedirectTo: `${window.location.origin}/auth/callback`
           },
         });
 
@@ -114,16 +120,35 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
         console.log("User created successfully");
         toast.success("Account created! Please check your email to confirm your account.");
-        navigate("/email-confirmation");
+        
+        // Show email confirmation notice
+        setPendingEmail(formData.email.trim());
+        setShowEmailNotice(true);
+        
+        // Reset form after successful signup
+        setFormData({
+          fullName: "",
+          organizationName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "user" as UserRole,
+        });
         
       } else {
         // Login
-        const { error: loginError } = await supabase.auth.signInWithPassword({
+        const { data, error: loginError } = await supabase.auth.signInWithPassword({
           email: formData.email.trim(),
           password: formData.password,
         });
 
         if (loginError) throw loginError;
+
+        // Check if email is confirmed
+        if (data.user && !data.user.email_confirmed_at) {
+          toast.error("Please confirm your email before logging in. Check your inbox for a confirmation link.");
+          return;
+        }
 
         // Handle remember me
         if (rememberMe) {
@@ -133,43 +158,82 @@ export default function AuthForm({ mode }: AuthFormProps) {
         }
 
         toast.success("Successfully logged in!");
-        navigate("/dashboard");
+        // Navigation will be handled by the auth state change listener
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      const errorMessage = err?.message || "Something went wrong";
+      let errorMessage = "Something went wrong";
+      
+      // Handle specific error messages
+      if (err?.message?.includes("Invalid login credentials")) {
+        errorMessage = "Invalid email or password";
+      } else if (err?.message?.includes("Email not confirmed")) {
+        errorMessage = "Please confirm your email before logging in";
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Check initial session and set up auth state listener
   useEffect(() => {
-    const checkSession = async () => {
+    let mounted = true;
+
+    const checkInitialSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          navigate("/dashboard");
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          if (session?.user) {
+            if (session.user.email_confirmed_at) {
+              // User is authenticated and email is confirmed
+              navigate("/dashboard", { replace: true });
+              return;
+            } else {
+              // User exists but email not confirmed - stay on current page
+              console.log("User session found but email not confirmed");
+            }
+          }
+          setSessionChecked(true);
         }
       } catch (error) {
         console.error("Session check error:", error);
+        if (mounted) {
+          setSessionChecked(true);
+        }
       }
     };
 
-    checkSession();
+    checkInitialSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
+    // Set up auth state change listener - but only after initial check
+    let authSubscription: any = null;
+    
+    const setupAuthListener = () => {
+      authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
+        if (mounted && sessionChecked) {
+          if (session?.user?.email_confirmed_at) {
+            navigate("/dashboard", { replace: true });
+          }
+        }
+      });
+    };
+
+    // Delay setting up the listener to avoid conflicts
+    const timeoutId = setTimeout(setupAuthListener, 1000);
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      clearTimeout(timeoutId);
+      if (authSubscription) {
+        authSubscription.data.subscription.unsubscribe();
+      }
     };
-  }, [navigate]);
+  }, [navigate, sessionChecked]);
 
   // Load remember me preference
   useEffect(() => {
@@ -179,9 +243,27 @@ export default function AuthForm({ mode }: AuthFormProps) {
     }
   }, []);
 
+  // Show loading while checking session
+  if (!sessionChecked) {
+    return (
+      <div className="auth-container">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-container">
       <Toaster richColors position="top-right" />
+      
+      {showEmailNotice && (
+        <EmailConfirmationNotice 
+          email={pendingEmail}
+          onClose={() => setShowEmailNotice(false)}
+        />
+      )}
 
       <h2 className="auth-title">
         {mode === "login" ? (

@@ -8,17 +8,19 @@ import SearchResults from './pages/SearchResults'
 import PropertyDetails from './pages/PropertyDetails'
 import PropertyUpload from './pages/PropertyUpload'
 import ProtectedRoute from './components/ProtectedRoute'
-import EmailConfirmation from './pages/EmailConfirmation'
+import AuthCallback from './pages/AuthCallback';
 import MockPage from './pages/MockPage'
 import AdminPanel from './pages/AdminPanel'
 function App() {
   return (
     <Routes>
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      
+      {/* Public Routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/email-confirmation" element={<EmailConfirmation />} />
       <Route path="/search" element={<SearchResults />} />
       <Route path="/property/:id" element={<PropertyDetails />} />
       <Route path="/mock" element={<MockPage />} />

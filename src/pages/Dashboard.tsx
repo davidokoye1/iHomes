@@ -28,48 +28,71 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [insertingMockData, setInsertingMockData] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchUserAndData = async () => {
+      try {
+        // Get current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          return;
+        }
+
+        if (!session?.user?.email_confirmed_at) {
+          // Let ProtectedRoute handle the redirect
+          return;
+        }
+
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('Profile error:', profileError);
+          return;
+        }
+
+        if (mounted) {
+          setUser(profile);
+
+          // Fetch user's properties if agent/admin
+          if (profile.role === 'agent' || profile.role === 'admin') {
+            try {
+              const properties = await PropertiesService.getPropertiesByAgent(profile.id);
+              setUserProperties(properties);
+
+              // Fetch dashboard stats
+              await fetchDashboardStats(profile);
+            } catch (error) {
+              console.error('Error fetching properties:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setSessionChecked(true);
+        }
+      }
+    };
+
     fetchUserAndData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  const fetchUserAndData = async () => {
-    try {
-      const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) {
-        navigate("/login");
-        return;
-      }
-
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.user.id)
-        .single();
-
-      if (error || !profile) {
-        navigate("/login");
-        return;
-      }
-
-      setUser(profile);
-
-      // Fetch user's properties if agent/admin
-      if (profile.role === 'agent' || profile.role === 'admin') {
-        const properties = await PropertiesService.getPropertiesByAgent(profile.id);
-        setUserProperties(properties);
-
-        // Fetch dashboard stats
-        await fetchDashboardStats(profile);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      navigate("/login");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchDashboardStats = async (profile: Profile) => {
     try {
@@ -106,8 +129,13 @@ export default function Dashboard() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      await supabase.auth.signOut();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate("/login", { replace: true });
+    }
   };
 
   const handleDeleteProperty = async (propertyId: string) => {
@@ -350,7 +378,8 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
+  // Show loading while checking session and fetching data
+  if (loading || !sessionChecked) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -365,11 +394,30 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h2>
-          <Button onClick={() => navigate('/login')} variant="colored">
-            Login
-          </Button>
+        <div className="max-w-md mx-auto pt-16">
+          <div className="bg-white rounded-lg p-8 text-center">
+            <div className="text-red-500 text-4xl mb-4">🚫</div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You need to be logged in with a confirmed email address to access this page.
+            </p>
+            <div className="space-y-3">
+              <Button 
+                onClick={() => navigate('/login')} 
+                variant="colored"
+                className="w-full"
+              >
+                Go to Login
+              </Button>
+              <Button 
+                onClick={() => navigate('/')} 
+                variant="white"
+                className="w-full"
+              >
+                Go to Home
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -470,7 +518,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-
             <div className="bg-white rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -502,12 +549,25 @@ export default function Dashboard() {
                   <Home className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No properties yet</h3>
                   <p className="text-gray-600 mb-4">Start by adding your first property listing</p>
-                  <Link to="/upload-property">
-                    <Button variant="colored">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Property
-                    </Button>
-                  </Link>
+                  <div className="space-y-3">
+                    <Link to="/upload-property">
+                      <Button variant="colored">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Property
+                      </Button>
+                    </Link>
+                    <div>
+                      <Button
+                        variant="white"
+                        onClick={insertMockData}
+                        disabled={insertingMockData}
+                        className="flex items-center gap-2"
+                      >
+                        <Database className="h-4 w-4" />
+                        {insertingMockData ? 'Inserting...' : 'Insert Sample Properties'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="p-6">
@@ -579,20 +639,6 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
-                  
-                  {userProperties.length === 0 && (
-                    <div className="flex justify-center py-8">
-                      <Button
-                        variant="colored"
-                        onClick={insertMockData}
-                        disabled={insertingMockData}
-                        className="flex items-center gap-2"
-                      >
-                        <Database className="h-4 w-4" />
-                        {insertingMockData ? 'Inserting...' : 'Insert Sample Properties'}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

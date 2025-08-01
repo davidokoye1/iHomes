@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Heart, 
-  Share2, 
-  MapPin, 
-  Bed, 
-  Bath, 
-  Square, 
-  Car, 
-  Phone, 
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import LogoIcon from "../assets/Path.png"; // Assuming you have a logo icon
+import {
+  Heart,
+  Share2,
+  MapPin,
+  Bed,
+  Bath,
+  Square,
+  Car,
+  Phone,
   Mail,
   ArrowLeft,
   ChevronLeft,
@@ -23,13 +24,13 @@ import {
   Utensils,
   Waves,
   Mountain,
-  Droplet
-} from 'lucide-react';
-import Navbar from '../components/Navbar';
-import Button from '../components/Button';
-import ListingCard from '../components/ListingCard';
-import { PropertiesService } from '../services/properties';
-import type { PropertyWithImages, PropertyListing } from '../types/database';
+  Droplet,
+} from "lucide-react";
+import Navbar from "../components/Navbar";
+import Button from "../components/Button";
+import ListingCard from "../components/ListingCard";
+import { PropertiesService } from "../services/properties";
+import type { PropertyWithImages, PropertyListing } from "../types/database";
 
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,21 +53,21 @@ const PropertyDetails = () => {
       setLoading(true);
       const [propertyData, suggestionsData] = await Promise.all([
         PropertiesService.getPropertyById(propertyId),
-        PropertiesService.getPropertySuggestions(propertyId)
+        PropertiesService.getPropertySuggestions(propertyId),
       ]);
 
       if (propertyData) {
         setProperty(propertyData);
         setSuggestions(suggestionsData);
-        
+
         // Record property view
         PropertiesService.recordPropertyView(propertyId);
       } else {
-        navigate('/');
+        navigate("/");
       }
     } catch (error) {
-      console.error('Error fetching property:', error);
-      navigate('/');
+      console.error("Error fetching property:", error);
+      navigate("/");
     } finally {
       setLoading(false);
     }
@@ -78,47 +79,55 @@ const PropertyDetails = () => {
         <h3 className="text-2xl font-bold mb-6">Contact Agent</h3>
         <form className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
-            <input 
-              type="text" 
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Name
+            </label>
+            <input
+              type="text"
               className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="Your full name"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-            <input 
-              type="email" 
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
               className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="your.email@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
-            <input 
-              type="tel" 
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Phone
+            </label>
+            <input
+              type="tel"
               className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="Your phone number"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Message</label>
-            <textarea 
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Message
+            </label>
+            <textarea
               rows={4}
               className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="I'm interested in this property..."
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button 
-              variant="colored" 
+            <Button
+              variant="colored"
               className="flex-1 py-3"
               onClick={() => setShowContactForm(false)}
             >
               Send Message
             </Button>
-            <Button 
-              variant="white" 
+            <Button
+              variant="white"
               className="py-3"
               onClick={() => setShowContactForm(false)}
             >
@@ -132,10 +141,17 @@ const PropertyDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white flex flex-col">
         <Navbar />
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+
+        <div className="flex flex-1 justify-center items-center">
+          <div className="relative flex items-center justify-center">
+            {/* Outer Spinner Circle */}
+            <div className="h-16 w-16 rounded-full border-4 border-t-transparent border-[#5dd27c] animate-spin"></div>
+
+            {/* Inner Dot or Logo/Icon (optional) */}
+            <div className="absolute h-6 w-6"><img src={LogoIcon} alt="" /></div>
+          </div>
         </div>
       </div>
     );
@@ -146,8 +162,10 @@ const PropertyDetails = () => {
       <div className="min-h-screen bg-white">
         <Navbar />
         <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Property not found</h2>
-          <Button onClick={() => navigate('/')} variant="colored">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            Property not found
+          </h2>
+          <Button onClick={() => navigate("/")} variant="colored">
             Back to Home
           </Button>
         </div>
@@ -160,7 +178,7 @@ const PropertyDetails = () => {
   return (
     <div className="bg-white min-h-screen">
       <Navbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Back button */}
         <button
@@ -181,7 +199,7 @@ const PropertyDetails = () => {
           <div className="h-[513px]">
             {property.images.length > 0 ? (
               <img
-                src={currentImage?.image_url || '/placeholder-property.jpg'}
+                src={currentImage?.image_url || "/placeholder-property.jpg"}
                 alt={property.title}
                 className="w-full h-full object-cover sharp-inner bg-gray-100"
               />
@@ -189,12 +207,14 @@ const PropertyDetails = () => {
               <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center sharp-inner">
                 <div className="text-center">
                   <Home className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <span className="text-gray-500 text-lg">No images available</span>
+                  <span className="text-gray-500 text-lg">
+                    No images available
+                  </span>
                 </div>
               </div>
             )}
           </div>
-          
+
           <div className="grid grid-cols-2 gap-[8px]">
             {property.images.slice(1, 5).map((image, index) => (
               <div key={index} className="relative">
@@ -211,13 +231,19 @@ const PropertyDetails = () => {
                 )}
               </div>
             ))}
-            
+
             {/* Fill remaining slots if less than 4 additional images */}
-            {Array.from({ length: Math.max(0, 4 - (property.images.length - 1)) }, (_, index) => (
-              <div key={`placeholder-${index}`} className="bg-gray-200 h-[256.5px] w-full sharp-inner flex items-center justify-center">
-                <Home className="h-8 w-8 text-gray-400" />
-              </div>
-            ))}
+            {Array.from(
+              { length: Math.max(0, 4 - (property.images.length - 1)) },
+              (_, index) => (
+                <div
+                  key={`placeholder-${index}`}
+                  className="bg-gray-200 h-[256.5px] w-full sharp-inner flex items-center justify-center"
+                >
+                  <Home className="h-8 w-8 text-gray-400" />
+                </div>
+              )
+            )}
           </div>
         </div>
 
@@ -227,7 +253,7 @@ const PropertyDetails = () => {
             {property.property_type} In {property.city}, GM
           </h2>
           <p className="text-gray-600 text-[20px] mb-4">
-            {property.address} <br /> 
+            {property.address} <br />
             {property.city}, GM
           </p>
         </div>
@@ -269,10 +295,13 @@ const PropertyDetails = () => {
             <div className="mb-6">
               <div className="flex flex-col justify-center item-start mb-2">
                 <p className="text-[32px] font-semibold text-black">
-                  D{property.price.toLocaleString()}{property.listing_type === 'rent' ? '/m' : ''}
+                  D{property.price.toLocaleString()}
+                  {property.listing_type === "rent" ? "/m" : ""}
                 </p>
-                {property.listing_type === 'rent' && (
-                  <p className="text-sm text-gray-500">+6 months down-payment</p>
+                {property.listing_type === "rent" && (
+                  <p className="text-sm text-gray-500">
+                    +6 months down-payment
+                  </p>
                 )}
               </div>
               <a href="#" className="text-[#388e3c] text-[16px] underline">
@@ -293,16 +322,13 @@ const PropertyDetails = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-3 mb-2">
-              <Button 
+              <Button
                 variant="colored"
                 onClick={() => setShowContactForm(true)}
               >
                 Book a Consultation
               </Button>
-              <Button 
-                variant="white"
-                onClick={() => setShowContactForm(true)}
-              >
+              <Button variant="white" onClick={() => setShowContactForm(true)}>
                 Chat Now
               </Button>
             </div>
@@ -319,7 +345,10 @@ const PropertyDetails = () => {
                 <h3 className="text-lg font-semibold mb-4">Featured View</h3>
                 <div className="flex flex-col gap-4">
                   <img
-                    src={property.images[0]?.image_url || '/placeholder-property.jpg'}
+                    src={
+                      property.images[0]?.image_url ||
+                      "/placeholder-property.jpg"
+                    }
                     alt="Featured view"
                     className="object-cover rounded-[16px] w-[480px] h-[218px]"
                   />
@@ -329,7 +358,10 @@ const PropertyDetails = () => {
                       <p className="text-[20px] text-gray-600 mb-2">
                         {property.property_type} Interior
                       </p>
-                      <a href="#" className="text-[#388e3c] text-[20px] underline">
+                      <a
+                        href="#"
+                        className="text-[#388e3c] text-[20px] underline"
+                      >
                         View all photos &gt;
                       </a>
                     </div>
@@ -410,17 +442,29 @@ const PropertyDetails = () => {
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600 font-medium">Property Type</span>
-                  <span className="font-semibold capitalize text-gray-900">{property.property_type}</span>
+                  <span className="text-gray-600 font-medium">
+                    Property Type
+                  </span>
+                  <span className="font-semibold capitalize text-gray-900">
+                    {property.property_type}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600 font-medium">Listing Type</span>
-                  <span className="font-semibold capitalize text-gray-900">For {property.listing_type}</span>
+                  <span className="text-gray-600 font-medium">
+                    Listing Type
+                  </span>
+                  <span className="font-semibold capitalize text-gray-900">
+                    For {property.listing_type}
+                  </span>
                 </div>
                 {property.year_built && (
                   <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                    <span className="text-gray-600 font-medium">Year Built</span>
-                    <span className="font-semibold text-gray-900">{property.year_built}</span>
+                    <span className="text-gray-600 font-medium">
+                      Year Built
+                    </span>
+                    <span className="font-semibold text-gray-900">
+                      {property.year_built}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
@@ -428,7 +472,9 @@ const PropertyDetails = () => {
                     <Eye className="h-4 w-4" />
                     Views
                   </span>
-                  <span className="font-semibold text-gray-900">{property.views_count.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">
+                    {property.views_count.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 font-medium flex items-center gap-2">
@@ -447,13 +493,17 @@ const PropertyDetails = () => {
         {/* Similar Properties */}
         {suggestions.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">Similar Properties</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">
+              Similar Properties
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {suggestions.map((suggestion) => (
                 <ListingCard
                   key={suggestion.id}
                   id={suggestion.id}
-                  imageUrl={suggestion.primary_image || '/placeholder-property.jpg'}
+                  imageUrl={
+                    suggestion.primary_image || "/placeholder-property.jpg"
+                  }
                   price={`D${suggestion.price.toLocaleString()}`}
                   bedrooms={suggestion.bedrooms || 0}
                   bathrooms={suggestion.bathrooms || 0}
