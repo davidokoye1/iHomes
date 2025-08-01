@@ -1,4 +1,4 @@
-// src/components/AuthForm.tsx
+// src/components/AuthForm.tsx - TEMPORARY VERSION (No Email Confirmation)
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,7 +6,6 @@ import { Toaster, toast } from "sonner";
 import InputField from "./InputField";
 import RoleSelect from "./RoleSelect";
 import RememberMeCheckbox from "./RememberMeCheckbox";
-import EmailConfirmationNotice from "../pages/EmailConfirmationNotice";
 import "../styles/auth.css";
 
 interface AuthFormProps {
@@ -28,8 +27,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [showEmailNotice, setShowEmailNotice] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +89,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (mode === "signup") {
         console.log("Starting signup process...");
         
-        // Sign up the user with metadata that the database trigger expects
+        // Sign up the user WITHOUT email confirmation for testing
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email.trim(),
           password: formData.password,
@@ -102,8 +99,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
               role: formData.role,
               organization_name: formData.organizationName.trim() || null,
             },
-            // Ensure email confirmation is required
-            emailRedirectTo: `${window.location.origin}/auth/callback`
+            // DISABLE email confirmation for testing
+            emailRedirectTo: undefined
           },
         });
 
@@ -119,21 +116,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
         }
 
         console.log("User created successfully");
-        toast.success("Account created! Please check your email to confirm your account.");
+        toast.success("Account created successfully! You can now log in.");
         
-        // Show email confirmation notice
-        setPendingEmail(formData.email.trim());
-        setShowEmailNotice(true);
-        
-        // Reset form after successful signup
-        setFormData({
-          fullName: "",
-          organizationName: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "user" as UserRole,
-        });
+        // Navigate to login page
+        navigate("/login");
         
       } else {
         // Login
@@ -143,12 +129,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         });
 
         if (loginError) throw loginError;
-
-        // Check if email is confirmed
-        if (data.user && !data.user.email_confirmed_at) {
-          toast.error("Please confirm your email before logging in. Check your inbox for a confirmation link.");
-          return;
-        }
 
         // Handle remember me
         if (rememberMe) {
@@ -189,14 +169,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
         
         if (mounted) {
           if (session?.user) {
-            if (session.user.email_confirmed_at) {
-              // User is authenticated and email is confirmed
-              navigate("/dashboard", { replace: true });
-              return;
-            } else {
-              // User exists but email not confirmed - stay on current page
-              console.log("User session found but email not confirmed");
-            }
+            // User is authenticated - go to dashboard
+            navigate("/dashboard", { replace: true });
+            return;
           }
           setSessionChecked(true);
         }
@@ -216,7 +191,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     const setupAuthListener = () => {
       authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
         if (mounted && sessionChecked) {
-          if (session?.user?.email_confirmed_at) {
+          if (session?.user) {
             navigate("/dashboard", { replace: true });
           }
         }
@@ -257,13 +232,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
   return (
     <div className="auth-container">
       <Toaster richColors position="top-right" />
-      
-      {showEmailNotice && (
-        <EmailConfirmationNotice 
-          email={pendingEmail}
-          onClose={() => setShowEmailNotice(false)}
-        />
-      )}
 
       <h2 className="auth-title">
         {mode === "login" ? (

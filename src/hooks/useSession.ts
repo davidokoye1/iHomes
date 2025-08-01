@@ -1,4 +1,4 @@
-// src/hooks/useSession.ts
+// src/hooks/useSession.ts - TEMPORARY VERSION (No Email Confirmation Check)
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -20,9 +20,8 @@ export function useSession() {
         }
 
         if (mounted) {
-          // Only consider session valid if email is confirmed
-          const validSession = data.session?.user?.email_confirmed_at ? data.session : null;
-          setSession(validSession);
+          // Accept any valid session (no email confirmation check for testing)
+          setSession(data.session);
           setLoading(false);
         }
       } catch (error) {
@@ -40,9 +39,8 @@ export function useSession() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (mounted) {
-          // Only consider session valid if email is confirmed
-          const validSession = session?.user?.email_confirmed_at ? session : null;
-          setSession(validSession);
+          // Accept any valid session (no email confirmation check for testing)
+          setSession(session);
           setLoading(false);
         }
       }
