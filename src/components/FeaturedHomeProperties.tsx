@@ -1,5 +1,5 @@
 type FeaturedHomePropertiesProps = {
-  value: string | number;
+  value: string|number;
   label: string;
 };
 

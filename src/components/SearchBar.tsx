@@ -1,49 +1,32 @@
+// src/components/SearchBar.tsx - Enhanced with Database Integration
 import { useState, useRef, useEffect } from "react";
 import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search, Bath } from "lucide-react";
 import Button from "./Button";
 import { useSearch } from "../hooks/useSearch";
+import { PropertiesService } from "../services/properties";
 import type { PropertyType } from "../types/database";
 
 interface SearchBarProps {
   className?: string;
 }
 
-// Constants
-const LOCATIONS = [
-  { name: "Banjul", type: "Capital City", region: "WESTERN REGION" },
-  { name: "Serekunda", type: "City", region: "WESTERN REGION" },
-  { name: "Bakau", type: "Town", region: "WESTERN REGION" },
-  { name: "Fajara", type: "District", region: "WESTERN REGION" },
-  { name: "Kololi", type: "Town", region: "WESTERN REGION" },
-  { name: "Kairaba", type: "District", region: "WESTERN REGION" },
-  { name: "Bijilo", type: "Village", region: "WESTERN REGION" },
-  { name: "Brufut", type: "Village", region: "WESTERN REGION" },
-  { name: "Gunjur", type: "Town", region: "WESTERN REGION" },
-  { name: "Tanji", type: "Village", region: "WESTERN REGION" },
-  { name: "Sanyang", type: "Village", region: "WESTERN REGION" },
-  { name: "Kartong", type: "Village", region: "WESTERN REGION" },
-  { name: "Tujereng", type: "Village", region: "WESTERN REGION" },
-  { name: "Sukuta", type: "Town", region: "WESTERN REGION" },
-  { name: "Yundum", type: "Town", region: "WESTERN REGION" },
-  { name: "Kerewan", type: "Town", region: "NORTH BANK REGION" },
-  { name: "Farafenni", type: "Town", region: "NORTH BANK REGION" },
-  { name: "Essau", type: "Village", region: "NORTH BANK REGION" },
-  { name: "Barra", type: "Town", region: "NORTH BANK REGION" },
-  { name: "Amdalai", type: "Village", region: "NORTH BANK REGION" },
-  { name: "Kuntaur", type: "Village", region: "NORTH BANK REGION" },
-  { name: "Mansa Konko", type: "Town", region: "LOWER RIVER REGION" },
-  { name: "Soma", type: "Town", region: "LOWER RIVER REGION" },
-  { name: "Kaur", type: "Village", region: "LOWER RIVER REGION" },
-  { name: "Kwinella", type: "Village", region: "LOWER RIVER REGION" },
-  { name: "Janjanbureh", type: "Town", region: "CENTRAL RIVER REGION" },
-  { name: "Bansang", type: "Town", region: "CENTRAL RIVER REGION" },
-  { name: "Wassu", type: "Village", region: "CENTRAL RIVER REGION" },
-  { name: "Basse", type: "Town", region: "UPPER RIVER REGION" },
-  { name: "Fatoto", type: "Village", region: "UPPER RIVER REGION" },
-  { name: "Koina", type: "Village", region: "UPPER RIVER REGION" },
-  { name: "Garawol", type: "Village", region: "UPPER RIVER REGION" },
-];
+interface Location {
+  id: string;
+  name: string;
+  type: string;
+  region: string;
+  is_popular: boolean;
+}
 
+interface Amenity {
+  id: string;
+  name: string;
+  icon_name: string;
+  category: string;
+  is_popular: boolean;
+}
+
+// Constants for price ranges and bedrooms (can be moved to database later)
 const PRICE_RANGES = [
   { label: "Any Price", min: undefined, max: undefined },
   { label: "Under D50,000", min: undefined, max: 50000 },
@@ -64,14 +47,6 @@ const BEDROOM_OPTIONS = [
   { label: "5+ Bedrooms", min: 5, max: undefined },
 ];
 
-const BATHROOM_OPTIONS = [
-  { label: "Any Bathrooms", min: undefined },
-  { label: "1 Bathroom", min: 1 },
-  { label: "2 Bathrooms", min: 2 },
-  { label: "3 Bathrooms", min: 3 },
-  { label: "4+ Bathrooms", min: 4 },
-];
-
 const PROPERTY_TYPES = [
   { value: "", label: "All Types" },
   { value: "apartment", label: "Apartment" },
@@ -79,12 +54,40 @@ const PROPERTY_TYPES = [
   { value: "condo", label: "Condo" },
   { value: "townhouse", label: "Townhouse" },
   { value: "villa", label: "Villa" },
+  { value: "land", label: "Land" },
+  { value: "commercial", label: "Commercial" },
 ];
 
 const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const { searchParams, updateSearchParam, performSearch } = useSearch();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
+  
+  // Database-driven state
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [amenities, setAmenities] = useState<Amenity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load locations and amenities from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [locationsData, amenitiesData] = await Promise.all([
+          PropertiesService.getLocations(),
+          PropertiesService.getAmenities()
+        ]);
+        
+        setLocations(locationsData);
+        setAmenities(amenitiesData);
+      } catch (error) {
+        console.error('Error loading search data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Close all dropdowns when clicking outside
   useEffect(() => {
@@ -105,12 +108,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   // Display functions
   const getLocationDisplay = () => {
-    return searchParams.city ? `${searchParams.city}, GM` : "Tabokoto, GM";
+    if (searchParams.city) {
+      const location = locations.find(loc => loc.name === searchParams.city);
+      return location ? `${location.name}, GM` : `${searchParams.city}, GM`;
+    }
+    return "Any Location, GM";
   };
 
   const getPropertyTypeDisplay = () => {
-    if (!searchParams.property_type) return "Apartment";
-    return searchParams.property_type.charAt(0).toUpperCase() + searchParams.property_type.slice(1);
+    if (!searchParams.property_type) return "All Types";
+    const type = PROPERTY_TYPES.find(t => t.value === searchParams.property_type);
+    return type ? type.label : searchParams.property_type.charAt(0).toUpperCase() + searchParams.property_type.slice(1);
   };
 
   const getPriceRangeDisplay = () => {
@@ -126,12 +134,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     return option ? option.label : `${searchParams.min_bedrooms}+ Bedrooms`;
   };
 
-  const getBathroomsDisplay = () => {
-    return "Any Bathrooms";
-  };
-
-  // Filter locations
-  const filteredLocations = LOCATIONS.filter(
+  // Filter locations based on search
+  const filteredLocations = locations.filter(
     (location) =>
       location.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
       location.region.toLowerCase().includes(locationSearch.toLowerCase())
@@ -142,7 +146,24 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     if (!acc[location.region]) acc[location.region] = [];
     acc[location.region].push(location);
     return acc;
-  }, {} as Record<string, typeof LOCATIONS>);
+  }, {} as Record<string, Location[]>);
+
+  // Sort regions to show popular locations first
+  const sortedRegions = Object.keys(groupedLocations).sort((a, b) => {
+    const aHasPopular = groupedLocations[a].some(loc => loc.is_popular);
+    const bHasPopular = groupedLocations[b].some(loc => loc.is_popular);
+    if (aHasPopular && !bHasPopular) return -1;
+    if (!aHasPopular && bHasPopular) return 1;
+    return a.localeCompare(b);
+  });
+
+  if (loading) {
+    return (
+      <div className={`search-bar flex items-center justify-center p-[20px] max-w-[1314px] max-h-[111px] mx-auto relative ${className}`}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   // Dropdown components
   const LocationDropdown = () => (
@@ -175,7 +196,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
           </div>
 
           <div className="max-h-72 overflow-y-auto">
-            {Object.entries(groupedLocations).map(([region, regionLocations]) => (
+            {/* Any Location Option */}
+            <div className="border-b border-gray-100">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    updateSearchParam("city", undefined);
+                    setActiveDropdown(null);
+                    setLocationSearch("");
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-medium text-gray-900 group-hover:text-green-700">Any Location</div>
+                    <div className="text-sm text-gray-500">Search all areas</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {sortedRegions.map((region) => (
               <div key={region} className="border-b border-gray-100 last:border-b-0">
                 <div className="px-4 py-2 bg-gray-50">
                   <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -183,22 +223,37 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                   </h4>
                 </div>
                 <div className="py-1">
-                  {regionLocations.map((location) => (
-                    <button
-                      key={location.name}
-                      onClick={() => {
-                        updateSearchParam("city", location.name);
-                        setActiveDropdown(null);
-                        setLocationSearch("");
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900 group-hover:text-green-700">{location.name}</div>
-                        <div className="text-sm text-gray-500">{location.type}</div>
-                      </div>
-                    </button>
-                  ))}
+                  {groupedLocations[region]
+                    .sort((a, b) => {
+                      if (a.is_popular && !b.is_popular) return -1;
+                      if (!a.is_popular && b.is_popular) return 1;
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map((location) => (
+                      <button
+                        key={location.id}
+                        onClick={() => {
+                          updateSearchParam("city", location.name);
+                          setActiveDropdown(null);
+                          setLocationSearch("");
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 group-hover:text-green-700">
+                              {location.name}
+                            </span>
+                            {location.is_popular && (
+                              <span className="bg-green-100 text-green-700 px-1.5 py-0.5 text-xs rounded-full">
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">{location.type}</div>
+                        </div>
+                      </button>
+                    ))}
                 </div>
               </div>
             ))}
@@ -228,7 +283,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               <button
                 key={option.value}
                 onClick={() => {
-                  updateSearchParam("property_type", option.value as PropertyType || undefined);
+                  updateSearchParam("property_type", (option.value as PropertyType) || undefined);
                   setActiveDropdown(null);
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 flex items-center gap-3 group"
@@ -320,8 +375,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       )}
     </div>
   );
-
-  // Removed BathroomsDropdown since min_bathrooms is not in the SearchParams interface
 
   return (
     <div className={`search-bar flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] mx-auto relative ${className}`}>

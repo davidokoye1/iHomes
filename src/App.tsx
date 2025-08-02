@@ -8,7 +8,7 @@ import SearchResults from './pages/SearchResults'
 import PropertyDetails from './pages/PropertyDetails'
 import PropertyUpload from './pages/PropertyUpload'
 import ProtectedRoute from './components/ProtectedRoute'
-import AuthCallback from './pages/AuthCallback';
+import AuthCallback from './components/AuthCallback';
 import MockPage from './pages/MockPage'
 import AdminPanel from './pages/AdminPanel'
 function App() {

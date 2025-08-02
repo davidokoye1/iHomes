@@ -1,4 +1,4 @@
-// 2. RecommendedListings.tsx - Updated
+// src/components/RecommendedListings.tsx
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "./Button";
@@ -10,6 +10,7 @@ import "../styles/global.css";
 const RecommendedListings = () => {
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRecentProperties();
@@ -17,10 +18,18 @@ const RecommendedListings = () => {
 
   const fetchRecentProperties = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const recentProperties = await PropertiesService.getRecentProperties(8);
-      setProperties(recentProperties);
-    } catch (error) {
-      console.error('Error fetching recent properties:', error);
+      
+      if (recentProperties.length === 0) {
+        setError('No properties found. Try creating some sample properties.');
+      } else {
+        setProperties(recentProperties);
+      }
+    } catch (err) {
+      console.error('Error fetching recent properties:', err);
+      setError('Failed to load properties. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -52,9 +61,27 @@ const RecommendedListings = () => {
         </Link>
       </div>
 
-      {properties.length === 0 ? (
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">{error}</p>
+          <button 
+            onClick={fetchRecentProperties}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {properties.length === 0 && !error ? (
         <div className="text-center py-8">
           <p className="text-gray-500">No properties available at the moment</p>
+          <button 
+            onClick={fetchRecentProperties}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Refresh
+          </button>
         </div>
       ) : (
         <div className="flex overflow-x-auto hide-scrollbar gap-4">
@@ -63,11 +90,11 @@ const RecommendedListings = () => {
               <ListingCard
                 id={property.id}
                 imageUrl={property.primary_image || '/placeholder-property.jpg'}
-                price={`D${property.price.toLocaleString()}${property.listing_type === 'rent' ? '/month' : ''}`}
+                price={`${property.price.toLocaleString()}${property.listing_type === 'rent' ? '/month' : ''}`}
                 bedrooms={property.bedrooms || 0}
                 bathrooms={property.bathrooms || 0}
                 addressLine1={property.address}
-                addressLine2={`${property.city}, GM`} // Removed country field
+                addressLine2={`${property.city}, GM`}
                 propertyType={property.property_type}
                 listingType={property.listing_type}
               />

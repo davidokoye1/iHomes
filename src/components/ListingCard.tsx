@@ -1,30 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
-import type { PropertyType, ListingType } from "../types/database";
+import type { PropertyType, ListingType, SearchResult } from "../types/database";
 
 interface ListingCardProps {
-  id?: string;
+  id: string;
   imageUrl: string;
-  price: string;
-  bedrooms: number;
-  bathrooms: number;
+  price: number | string;
+  bedrooms?: number;
+  bathrooms?: number;
   addressLine1: string;
   addressLine2: string;
   propertyType?: PropertyType;
   listingType?: ListingType;
+  featured?: boolean;
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({
   id,
   imageUrl,
   price,
-  bedrooms,
-  bathrooms,
+  bedrooms = 0,
+  bathrooms = 0,
   addressLine1,
   addressLine2,
   propertyType,
   listingType,
+  featured
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const navigate = useNavigate();
@@ -35,9 +37,17 @@ const ListingCard: React.FC<ListingCardProps> = ({
   };
 
   const handleClick = () => {
-    if (id) {
-      navigate(`/property/${id}`);
+    navigate(`/property/${id}`);
+  };
+
+  // Format price with proper parsing
+  const formatPrice = (price: number | string) => {
+    if (typeof price === 'string') {
+      // Remove non-numeric characters except decimal point
+      const cleaned = price.replace(/[^0-9.]/g, '');
+      return `D${cleaned}`;
     }
+    return `D${price.toLocaleString()}`;
   };
 
   return (
@@ -45,16 +55,23 @@ const ListingCard: React.FC<ListingCardProps> = ({
       className="listing-card w-full max-w-[400px] p-4 flex flex-col gap-4 rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleClick}
     >
-      <img
-        src={imageUrl}
-        alt="Property"
-        className="w-full h-[321px] object-cover rounded-lg"
-      />
+      <div className="relative">
+        <img
+          src={imageUrl}
+          alt="Property"
+          className="w-full h-[321px] object-cover rounded-lg"
+        />
+        {featured && (
+          <div className="absolute top-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded text-sm font-semibold">
+            Featured
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-col">
         {/* Price and Favorite */}
         <div className="flex items-center justify-between">
-          <h3 className="text-2xl font-semibold text-gray-900">{price}</h3>
+          <h3 className="text-2xl font-semibold text-gray-900">{formatPrice(price)}</h3>
           <button
             onClick={toggleFavorite}
             className="transition-transform hover:scale-110"
@@ -70,6 +87,12 @@ const ListingCard: React.FC<ListingCardProps> = ({
         </div>
 
         <div className="flex flex-col gap-4">
+          {/* Property Type & Listing Type */}
+          <div className="flex gap-2 text-gray-500 text-sm">
+            {propertyType && <span className="capitalize">{propertyType}</span>}
+            {listingType && <span>• {listingType === 'sale' ? 'For Sale' : 'For Rent'}</span>}
+          </div>
+          
           {/* Meta Info */}
           <div className="flex gap-4 text-gray-500 text-lg">
             <span>{bedrooms} Beds</span>

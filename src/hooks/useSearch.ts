@@ -1,3 +1,4 @@
+// src/hooks/useSearch.ts
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { SearchParams } from '../types/database';
@@ -13,12 +14,32 @@ export const useSearch = () => {
     }));
   }, []);
 
+  const toggleArrayParam = useCallback((key: keyof SearchParams, value: string) => {
+    setSearchParams(prev => {
+      const currentValues = (prev[key] as string[] | undefined) || [];
+      const index = currentValues.indexOf(value);
+      
+      if (index === -1) {
+        return { ...prev, [key]: [...currentValues, value] };
+      } else {
+        return { 
+          ...prev, 
+          [key]: currentValues.filter(item => item !== value) 
+        };
+      }
+    });
+  }, []);
+
   const performSearch = useCallback(() => {
     const params = new URLSearchParams();
     
     Object.entries(searchParams).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        params.set(key, String(value));
+        if (Array.isArray(value)) {
+          value.forEach(v => params.append(key, v));
+        } else {
+          params.set(key, String(value));
+        }
       }
     });
 
@@ -32,6 +53,7 @@ export const useSearch = () => {
   return {
     searchParams,
     updateSearchParam,
+    toggleArrayParam,
     performSearch,
     clearSearch,
     setSearchParams

@@ -11,7 +11,8 @@ import type { PropertyListing } from "../types/database";
 
 const HeroSection = () => {
   const navigate = useNavigate();
-  const [featuredProperty, setFeaturedProperty] = useState<PropertyListing | null>(null);
+  const [featuredProperty, setFeaturedProperty] =
+    useState<PropertyListing | null>(null);
 
   useEffect(() => {
     const loadFeaturedProperty = async () => {
@@ -21,7 +22,7 @@ const HeroSection = () => {
           setFeaturedProperty(properties[0]);
         }
       } catch (error) {
-        console.error('Error loading featured property:', error);
+        console.error("Error loading featured property:", error);
       }
     };
 
@@ -32,7 +33,7 @@ const HeroSection = () => {
     if (featuredProperty) {
       navigate(`/property/${featuredProperty.id}`);
     } else {
-      navigate('/search?city=Tabokoto');
+      navigate("/search?city=Tabokoto");
     }
   };
 
@@ -50,20 +51,37 @@ const HeroSection = () => {
     return HeroImage;
   };
 
+  const getBedroomsDisplay = () => {
+    return featuredProperty ? featuredProperty.bedrooms : 0;
+  };
+  const getBathroomsDisplay = () => {
+    return featuredProperty ? featuredProperty.bathrooms : 0;
+  };
+  const getPriceDisplay = () => {
+    return featuredProperty ? `GMD ${featuredProperty.price}` : `GMD ${2000}`;
+  };
   return (
     <section className="hero-section mt-[36px] flex flex-col items-start justify-center gap-[22px]">
       <h1 className="heading1">Let Us Find The Perfect Place For You</h1>
 
       <div className="bento1 flex flex-col items-center justify-center gap-[32px]">
-        <div className="bento2 flex items-center justify-center gap-[32px]">
-          <FeaturedPropertyCard
-            imageUrl={getDisplayImage()}
-            location={getDisplayLocation()}
-            onViewDetails={handleViewDetails}
-          />
-          <CtaCard />
-        </div>
-
+        {featuredProperty ? (
+          <div className="bento2 flex items-center justify-center gap-[32px]">
+            <FeaturedPropertyCard
+              imageUrl={getDisplayImage()}
+              location={getDisplayLocation()}
+              onViewDetails={handleViewDetails}
+            />
+            <CtaCard
+              location={getDisplayLocation()}
+              bedrooms={getBedroomsDisplay()}
+              bathrooms={getBathroomsDisplay()}
+              price={getPriceDisplay()}
+            />
+          </div>
+        ) : (
+          ""
+        )}
         <SearchBar />
       </div>
     </section>
