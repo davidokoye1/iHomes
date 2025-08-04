@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
-import type { PropertyType, ListingType, SearchResult } from "../types/database";
+import type { PropertyType, ListingType} from "../types/database";
+import PlaceHolder from "../assets/listing-01.jpg"
 
 interface ListingCardProps {
   id: string;
   imageUrl: string;
-  price: number | string;
+  price: string | number;
   bedrooms?: number;
   bathrooms?: number;
   addressLine1: string;
@@ -39,33 +40,49 @@ const ListingCard: React.FC<ListingCardProps> = ({
   const handleClick = () => {
     navigate(`/property/${id}`);
   };
-
-  // Format price with proper parsing
   const formatPrice = (price: number | string) => {
+    let numericPrice;
+
     if (typeof price === 'string') {
       // Remove non-numeric characters except decimal point
-      const cleaned = price.replace(/[^0-9.]/g, '');
-      return `D${cleaned}`;
+      numericPrice = parseFloat(price.replace(/[^0-9.]/g, ''));
+    } else {
+      numericPrice = price;
     }
-    return `D${price.toLocaleString()}`;
+
+    return `GMD ${numericPrice.toLocaleString()}${listingType === "rent" ? "/m" : ""}`;
   };
 
   return (
     <div
-      className="listing-card w-full max-w-[400px] p-4 flex flex-col gap-4 rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
+      className="listing-card w-[310px] p-4 flex flex-col gap-4 rounded-xl cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleClick}
     >
-      <div className="relative">
+
+      <div className="relative ">
         <img
-          src={imageUrl}
-          alt="Property"
-          className="w-full h-[321px] object-cover rounded-lg"
+            src={imageUrl ? imageUrl : PlaceHolder}
+            alt="Property"
+            className="w-full h-[321px] object-cover rounded-lg"
+            onError={(e) => {
+              e.target.src = PlaceHolder;
+            }}
         />
-        {featured && (
-          <div className="absolute top-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded text-sm font-semibold">
-            Featured
+        <div className="absolute flex top-2 right-2 gap-1">
+          {featured && (
+              <div className="bg-yellow-400 text-black px-2 py-1 rounded text-sm font-semibold">
+                Featured
+              </div>
+          )}
+          <div
+              className={`px-2 py-1 rounded-full text-sm font-semibold ${
+                  listingType === "rent" ? "bg-white text-black" : "bg-black text-white"
+              }`}
+          >
+            {listingType === "rent" ? "For Rent" : "For Sale"}
           </div>
-        )}
+        </div>
+
       </div>
 
       <div className="flex flex-col">

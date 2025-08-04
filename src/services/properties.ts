@@ -8,7 +8,7 @@ import type {
   PropertyFormData,
   SearchParams,
   DashboardStats,
-  SearchResult
+  SearchResult,
 } from "../types/database";
 
 /**
@@ -23,10 +23,10 @@ export class PropertiesService {
   static async getLocations() {
     try {
       const { data, error } = await supabase
-          .from("locations")
-          .select("*")
-          .order("is_popular", { ascending: false })
-          .order("display_order", { ascending: true });
+        .from("locations")
+        .select("*")
+        .order("is_popular", { ascending: false })
+        .order("display_order", { ascending: true });
 
       if (error) {
         console.error("Error fetching locations:", error);
@@ -47,11 +47,11 @@ export class PropertiesService {
   static async getAmenities() {
     try {
       const { data, error } = await supabase
-          .from("amenities")
-          .select("*")
-          .order("category", { ascending: true })
-          .order("is_popular", { ascending: false })
-          .order("display_order", { ascending: true });
+        .from("amenities")
+        .select("*")
+        .order("category", { ascending: true })
+        .order("is_popular", { ascending: false })
+        .order("display_order", { ascending: true });
 
       if (error) {
         console.error("Error fetching amenities:", error);
@@ -71,9 +71,7 @@ export class PropertiesService {
    */
   static async getSettings() {
     try {
-      const { data, error } = await supabase
-          .from("settings")
-          .select("*");
+      const { data, error } = await supabase.from("settings").select("*");
 
       if (error) {
         console.error("Error fetching settings:", error);
@@ -82,7 +80,7 @@ export class PropertiesService {
 
       // Convert array to key-value object for easier access
       const settings: Record<string, string> = {};
-      data?.forEach(setting => {
+      data?.forEach((setting) => {
         settings[setting.key] = setting.value;
       });
 
@@ -101,14 +99,16 @@ export class PropertiesService {
     try {
       // Get main property data with related information
       const { data: property, error: propertyError } = await supabase
-          .from("properties")
-          .select(`
+        .from("properties")
+        .select(
+          `
           *,
           agent:profiles!properties_agent_id_fkey(full_name, phone, agency_name, avatar_url, email),
           location:locations(name, region)
-        `)
-          .eq("id", id)
-          .single();
+        `
+        )
+        .eq("id", id)
+        .single();
 
       if (propertyError || !property) {
         console.error("Error fetching property:", propertyError);
@@ -117,10 +117,10 @@ export class PropertiesService {
 
       // Get property images ordered by display order
       const { data: images, error: imagesError } = await supabase
-          .from("property_images")
-          .select("*")
-          .eq("property_id", id)
-          .order("display_order", { ascending: true });
+        .from("property_images")
+        .select("*")
+        .eq("property_id", id)
+        .order("display_order", { ascending: true });
 
       if (imagesError) {
         console.error("Error fetching property images:", imagesError);
@@ -128,25 +128,25 @@ export class PropertiesService {
 
       // Get property amenities with full amenity details
       const { data: amenitiesData, error: amenitiesError } = await supabase
-          .from("property_amenities")
-          .select("amenity:amenities(id, name, icon_name, category)")
-          .eq("property_id", id);
+        .from("property_amenities")
+        .select("amenity:amenities(id, name, icon_name, category)")
+        .eq("property_id", id);
 
       if (amenitiesError) {
         console.error("Error fetching property amenities:", amenitiesError);
       }
 
       // Find primary image
-      const primaryImage = images?.find(img => img.is_primary);
+      const primaryImage = images?.find((img) => img.is_primary);
 
       return {
         ...property,
         images: images || [],
         primary_image: primaryImage?.image_url,
-        amenities: amenitiesData?.map(a => a.amenity) || [],
+        amenities: amenitiesData?.map((a) => a.amenity) || [],
         agent_name: property.agent?.full_name,
         agent_phone: property.agent?.phone,
-        agency_name: property.agent?.agency_name
+        agency_name: property.agent?.agency_name,
       };
     } catch (error) {
       console.error("Error in getPropertyById:", error);
@@ -158,11 +158,14 @@ export class PropertiesService {
    * Get featured properties for homepage display
    * Uses view or fallback query for compatibility
    */
-  static async getFeaturedProperties(limit: number = 5): Promise<PropertyListing[]> {
+  static async getFeaturedProperties(
+    limit: number = 5
+  ): Promise<PropertyListing[]> {
     try {
       const { data: properties, error } = await supabase
-          .from("v_featured_properties")
-          .select(`
+        .from("v_featured_properties")
+        .select(
+          `
           id,
           title,
           price,
@@ -180,18 +183,22 @@ export class PropertiesService {
           featured,
           views_count,
           created_at
-        `)
-          .limit(limit);
+        `
+        )
+        .limit(limit);
 
       if (error) {
         console.error("Error fetching featured properties:", error);
 
         // Handle view permission error with fallback
-        if (error.code === '42501') {
-          console.error("VIEW PERMISSION ERROR: Ensure you've granted SELECT permission to anon/authenticated");
+        if (error.code === "42501") {
+          console.error(
+            "VIEW PERMISSION ERROR: Ensure you've granted SELECT permission to anon/authenticated"
+          );
           const { data: fallbackData } = await supabase
-              .from("properties")
-              .select(`
+            .from("properties")
+            .select(
+              `
               id,
               title,
               price,
@@ -205,10 +212,11 @@ export class PropertiesService {
               featured,
               views_count,
               created_at
-            `)
-              .eq("featured", true)
-              .eq("status", "active")
-              .limit(limit);
+            `
+            )
+            .eq("featured", true)
+            .eq("status", "active")
+            .limit(limit);
 
           return fallbackData || [];
         }
@@ -226,11 +234,14 @@ export class PropertiesService {
    * Get recently added properties
    * Uses view or fallback query for compatibility
    */
-  static async getRecentProperties(limit: number = 8): Promise<PropertyListing[]> {
+  static async getRecentProperties(
+    limit: number = 8
+  ): Promise<PropertyListing[]> {
     try {
       const { data: properties, error } = await supabase
-          .from("v_active_properties")
-          .select(`
+        .from("v_active_properties")
+        .select(
+          `
           id,
           title,
           price,
@@ -248,19 +259,23 @@ export class PropertiesService {
           featured,
           views_count,
           created_at
-        `)
-          .order("created_at", { ascending: false })
-          .limit(limit);
+        `
+        )
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
       if (error) {
         console.error("Error fetching recent properties:", error);
 
         // Handle view permission error with fallback
-        if (error.code === '42501') {
-          console.error("VIEW PERMISSION ERROR: Ensure you've granted SELECT permission to anon/authenticated");
+        if (error.code === "42501") {
+          console.error(
+            "VIEW PERMISSION ERROR: Ensure you've granted SELECT permission to anon/authenticated"
+          );
           const { data: fallbackData } = await supabase
-              .from("properties")
-              .select(`
+            .from("properties")
+            .select(
+              `
               id,
               title,
               price,
@@ -274,10 +289,11 @@ export class PropertiesService {
               featured,
               views_count,
               created_at
-            `)
-              .eq("status", "active")
-              .order("created_at", { ascending: false })
-              .limit(limit);
+            `
+            )
+            .eq("status", "active")
+            .order("created_at", { ascending: false })
+            .limit(limit);
 
           return fallbackData || [];
         }
@@ -295,10 +311,14 @@ export class PropertiesService {
    * Get property suggestions based on current property
    * Uses location, city, and property type for matching
    */
-  static async getPropertySuggestions(propertyId: string, limit: number = 4): Promise<PropertyListing[]> {
+  static async getPropertySuggestions(
+    propertyId: string,
+    limit: number = 4
+  ): Promise<PropertyListing[]> {
     try {
       // Get current property details for comparison
-      const { data: currentProperty, error: currentPropertyError } = await supabase
+      const { data: currentProperty, error: currentPropertyError } =
+        await supabase
           .from("properties")
           .select("city, property_type, price, location_id")
           .eq("id", propertyId)
@@ -311,8 +331,9 @@ export class PropertiesService {
 
       // Try to find similar properties in same location first
       let { data: properties, error } = await supabase
-          .from("v_active_properties")
-          .select(`
+        .from("v_active_properties")
+        .select(
+          `
           id,
           title,
           price,
@@ -330,18 +351,20 @@ export class PropertiesService {
           featured,
           views_count,
           created_at
-        `)
-          .neq("id", propertyId)
-          .eq("location_id", currentProperty.location_id)
-          .order("created_at", { ascending: false })
-          .limit(limit);
+        `
+        )
+        .neq("id", propertyId)
+        .eq("location_id", currentProperty.location_id)
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
       // If not enough properties in same location, expand to same city
       if (properties && properties.length < limit) {
         const remainingLimit = limit - properties.length;
         const { data: cityProperties, error: cityError } = await supabase
-            .from("v_active_properties")
-            .select(`
+          .from("v_active_properties")
+          .select(
+            `
             id,
             title,
             price,
@@ -359,12 +382,13 @@ export class PropertiesService {
             featured,
             views_count,
             created_at
-          `)
-            .neq("id", propertyId)
-            .eq("city", currentProperty.city)
-            .not("location_id", "eq", currentProperty.location_id)
-            .order("created_at", { ascending: false })
-            .limit(remainingLimit);
+          `
+          )
+          .neq("id", propertyId)
+          .eq("city", currentProperty.city)
+          .not("location_id", "eq", currentProperty.location_id)
+          .order("created_at", { ascending: false })
+          .limit(remainingLimit);
 
         if (cityError) {
           console.error("Error fetching city properties:", cityError);
@@ -377,8 +401,9 @@ export class PropertiesService {
       if (properties && properties.length < limit) {
         const remainingLimit = limit - properties.length;
         const { data: typeProperties, error: typeError } = await supabase
-            .from("v_active_properties")
-            .select(`
+          .from("v_active_properties")
+          .select(
+            `
             id,
             title,
             price,
@@ -396,12 +421,13 @@ export class PropertiesService {
             featured,
             views_count,
             created_at
-          `)
-            .neq("id", propertyId)
-            .eq("property_type", currentProperty.property_type)
-            .neq("city", currentProperty.city)
-            .order("created_at", { ascending: false })
-            .limit(remainingLimit);
+          `
+          )
+          .neq("id", propertyId)
+          .eq("property_type", currentProperty.property_type)
+          .neq("city", currentProperty.city)
+          .order("created_at", { ascending: false })
+          .limit(remainingLimit);
 
         if (typeError) {
           console.error("Error fetching type properties:", typeError);
@@ -437,7 +463,7 @@ export class PropertiesService {
 
       // Destructure and set defaults for search parameters
       const {
-        search_text = '',
+        search_text = "",
         property_type,
         listing_type,
         min_price,
@@ -450,10 +476,10 @@ export class PropertiesService {
         location_id,
         amenity_ids,
         featured_only = false,
-        sort_by = 'created_at',
-        sort_order = 'DESC',
+        sort_by = "created_at",
+        sort_order = "DESC",
         limit = 12,
-        offset = 0
+        offset = 0,
       } = params;
 
       // Map frontend parameter names to database function parameter names
@@ -463,8 +489,8 @@ export class PropertiesService {
         list_type: listing_type || null,
         min_price: min_price || null,
         max_price: max_price || null,
-        min_beds: min_bedrooms || null,  // Fixed: min_bedrooms -> min_beds
-        max_beds: max_bedrooms || null,   // Fixed: max_bedrooms -> max_beds
+        min_beds: min_bedrooms || null, // Fixed: min_bedrooms -> min_beds
+        max_beds: max_bedrooms || null, // Fixed: max_bedrooms -> max_beds
         min_baths: min_bathrooms || null, // Fixed: min_bathrooms -> min_baths
         max_baths: max_bathrooms || null, // Fixed: max_bathrooms -> max_baths (this was missing)
         city_name: city || null,
@@ -474,24 +500,35 @@ export class PropertiesService {
         sort_by,
         sort_order,
         limit_results: limit,
-        offset_results: offset
+        offset_results: offset,
       };
 
       console.log("RPC Parameters (database):", rpcParams);
 
       // Try to use the RPC function first
-      const { data, error } = await supabase.rpc('search_properties', rpcParams);
+      const { data, error } = await supabase.rpc(
+        "search_properties",
+        rpcParams
+      );
 
       if (error) {
         console.error("Error searching properties:", error);
 
         // Provide detailed error information for debugging
-        if (error.code === '42P13') {
-          console.error("FUNCTION LANGUAGE ERROR: Check if search_properties function has LANGUAGE specification");
-        } else if (error.message.includes("must appear in the GROUP BY clause")) {
-          console.error("VIEW DEFINITION ERROR: Your view has incorrect GROUP BY clauses");
-        } else if (error.code === '42702') {
-          console.error("AMBIGUOUS COLUMN ERROR: Check for column name conflicts in your function");
+        if (error.code === "42P13") {
+          console.error(
+            "FUNCTION LANGUAGE ERROR: Check if search_properties function has LANGUAGE specification"
+          );
+        } else if (
+          error.message.includes("must appear in the GROUP BY clause")
+        ) {
+          console.error(
+            "VIEW DEFINITION ERROR: Your view has incorrect GROUP BY clauses"
+          );
+        } else if (error.code === "42702") {
+          console.error(
+            "AMBIGUOUS COLUMN ERROR: Check for column name conflicts in your function"
+          );
         }
 
         // Fallback to direct query if RPC fails
@@ -500,33 +537,34 @@ export class PropertiesService {
       }
 
       // Process the successful RPC response
-      const processedProperties = (data || []).map(p => ({
+      const processedProperties = (data || []).map((p) => ({
         ...p,
         // Convert price from string to number if needed
-        price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
+        price: typeof p.price === "string" ? parseFloat(p.price) : p.price,
         // Handle possible null/undefined values
         bedrooms: p.bedrooms || 0,
         bathrooms: p.bathrooms || 0,
         square_feet: p.square_feet || 0,
         // Remove total_count from individual properties
-        total_count: undefined
+        total_count: undefined,
       }));
 
-      const total_count = processedProperties.length > 0 ? processedProperties[0].total_count : 0;
+      const total_count =
+        processedProperties.length > 0 ? processedProperties[0].total_count : 0;
       const has_more = offset + processedProperties.length < total_count;
 
       console.log("Final result:", {
         properties_count: processedProperties.length,
         total_count,
         has_more,
-        first_property: processedProperties[0]
+        first_property: processedProperties[0],
       });
       console.log("=== SEARCH DEBUG END ===");
 
       return {
         properties: processedProperties,
         total_count,
-        has_more
+        has_more,
       };
     } catch (error) {
       console.error("Error in searchProperties:", error);
@@ -545,7 +583,7 @@ export class PropertiesService {
   }> {
     try {
       const {
-        search_text = '',
+        search_text = "",
         property_type,
         listing_type,
         min_price,
@@ -558,16 +596,14 @@ export class PropertiesService {
         location_id,
         amenity_ids,
         featured_only = false,
-        sort_by = 'created_at',
-        sort_order = 'DESC',
+        sort_by = "created_at",
+        sort_order = "DESC",
         limit = 12,
-        offset = 0
+        offset = 0,
       } = params;
 
       // Build the base query
-      let query = supabase
-          .from("v_active_properties")
-          .select(`
+      let query = supabase.from("v_active_properties").select(`
           id,
           title,
           price,
@@ -589,51 +625,51 @@ export class PropertiesService {
 
       // Apply filters conditionally
       if (search_text) {
-        query = query.ilike('title', `%${search_text}%`);
+        query = query.ilike("title", `%${search_text}%`);
       }
 
       if (property_type) {
-        query = query.eq('property_type', property_type);
+        query = query.eq("property_type", property_type);
       }
 
       if (listing_type) {
-        query = query.eq('listing_type', listing_type);
+        query = query.eq("listing_type", listing_type);
       }
 
       if (min_price) {
-        query = query.gte('price', min_price);
+        query = query.gte("price", min_price);
       }
 
       if (max_price) {
-        query = query.lte('price', max_price);
+        query = query.lte("price", max_price);
       }
 
       if (min_bedrooms) {
-        query = query.gte('bedrooms', min_bedrooms);
+        query = query.gte("bedrooms", min_bedrooms);
       }
 
       if (max_bedrooms) {
-        query = query.lte('bedrooms', max_bedrooms);
+        query = query.lte("bedrooms", max_bedrooms);
       }
 
       if (min_bathrooms) {
-        query = query.gte('bathrooms', min_bathrooms);
+        query = query.gte("bathrooms", min_bathrooms);
       }
 
       if (max_bathrooms) {
-        query = query.lte('bathrooms', max_bathrooms);
+        query = query.lte("bathrooms", max_bathrooms);
       }
 
       if (city) {
-        query = query.ilike('city', `%${city}%`);
+        query = query.ilike("city", `%${city}%`);
       }
 
       if (location_id) {
-        query = query.eq('location_id', location_id);
+        query = query.eq("location_id", location_id);
       }
 
       if (featured_only) {
-        query = query.eq('featured', true);
+        query = query.eq("featured", true);
       }
 
       // Handle amenities filter (this is complex with direct queries)
@@ -643,7 +679,7 @@ export class PropertiesService {
       }
 
       // Apply sorting
-      const ascending = sort_order === 'ASC';
+      const ascending = sort_order === "ASC";
       query = query.order(sort_by as any, { ascending });
 
       // Apply pagination
@@ -658,45 +694,45 @@ export class PropertiesService {
 
       // Get total count for pagination - simplified version
       let countQuery = supabase
-          .from("v_active_properties")
-          .select('*', { count: 'exact', head: true });
+        .from("v_active_properties")
+        .select("*", { count: "exact", head: true });
 
       // Apply the same filters for counting
       if (search_text) {
-        countQuery = countQuery.ilike('title', `%${search_text}%`);
+        countQuery = countQuery.ilike("title", `%${search_text}%`);
       }
       if (property_type) {
-        countQuery = countQuery.eq('property_type', property_type);
+        countQuery = countQuery.eq("property_type", property_type);
       }
       if (listing_type) {
-        countQuery = countQuery.eq('listing_type', listing_type);
+        countQuery = countQuery.eq("listing_type", listing_type);
       }
       if (min_price) {
-        countQuery = countQuery.gte('price', min_price);
+        countQuery = countQuery.gte("price", min_price);
       }
       if (max_price) {
-        countQuery = countQuery.lte('price', max_price);
+        countQuery = countQuery.lte("price", max_price);
       }
       if (min_bedrooms) {
-        countQuery = countQuery.gte('bedrooms', min_bedrooms);
+        countQuery = countQuery.gte("bedrooms", min_bedrooms);
       }
       if (max_bedrooms) {
-        countQuery = countQuery.lte('bedrooms', max_bedrooms);
+        countQuery = countQuery.lte("bedrooms", max_bedrooms);
       }
       if (min_bathrooms) {
-        countQuery = countQuery.gte('bathrooms', min_bathrooms);
+        countQuery = countQuery.gte("bathrooms", min_bathrooms);
       }
       if (max_bathrooms) {
-        countQuery = countQuery.lte('bathrooms', max_bathrooms);
+        countQuery = countQuery.lte("bathrooms", max_bathrooms);
       }
       if (city) {
-        countQuery = countQuery.ilike('city', `%${city}%`);
+        countQuery = countQuery.ilike("city", `%${city}%`);
       }
       if (location_id) {
-        countQuery = countQuery.eq('location_id', location_id);
+        countQuery = countQuery.eq("location_id", location_id);
       }
       if (featured_only) {
-        countQuery = countQuery.eq('featured', true);
+        countQuery = countQuery.eq("featured", true);
       }
 
       const { count: total_count } = await countQuery;
@@ -704,7 +740,7 @@ export class PropertiesService {
       return {
         properties: fallbackData || [],
         total_count: total_count || 0,
-        has_more: offset + (fallbackData?.length || 0) < (total_count || 0)
+        has_more: offset + (fallbackData?.length || 0) < (total_count || 0),
       };
     } catch (error) {
       console.error("Error in fallbackSearch:", error);
@@ -716,134 +752,322 @@ export class PropertiesService {
    * Create a new property listing
    * Handles property data, image uploads, and amenity associations
    */
-  static async createProperty(data: PropertyFormData, userId: string): Promise<Property | null> {
+ // FIXED createProperty function in PropertiesService
+static async createProperty(
+  data: PropertyFormData & { images: File[]; amenities: string[] },
+  userId: string
+): Promise<Property | null> {
+  try {
+    const { images, amenities, ...propertyData } = data;
+    
+    // Validate required fields before proceeding
+    if (!propertyData.title || !propertyData.description || !propertyData.price) {
+      throw new Error("Missing required fields: title, description, or price");
+    }
+    
+    // POTENTIAL FIX: Force schema refresh for Supabase
     try {
-      const { images, amenities, ...propertyData } = data;
+      await supabase.from("properties").select("id").limit(1);
+    } catch (schemaError) {
+      console.warn("Schema pre-check failed:", schemaError);
+    }
+    
+    // Add missing required fields from your DB schema
+    // Match the EXACT schema structure
+    const propertyDataWithDefaults = {
+      // Required fields (NOT NULL)
+      title: String(propertyData.title || '').trim(),
+      price: Number(propertyData.price),
+      property_type: propertyData.property_type,
+      listing_type: propertyData.listing_type,
+      address: String(propertyData.address || '').trim(),
+      city: String(propertyData.city || '').trim(),
+      agent_id: userId, // This will be added in the insert
+      
+      // Optional fields that match your schema
+      description: propertyData.description ? String(propertyData.description).trim() : null,
+      currency_code: propertyData.currency_code || 'GMD',
+      landmark: propertyData.landmark ? String(propertyData.landmark).trim() : null,
+      
+      // Numeric fields (integers in your schema)
+      bedrooms: propertyData.bedrooms ? Number(propertyData.bedrooms) : null,
+      bathrooms: propertyData.bathrooms ? Number(propertyData.bathrooms) : null,
+      area_sqft: propertyData.area_sqft ? Number(propertyData.area_sqft) : null,
+      square_feet: propertyData.square_feet ? Number(propertyData.square_feet) : null,
+      lot_size: propertyData.lot_size ? Number(propertyData.lot_size) : null,
+      year_built: propertyData.year_built ? Number(propertyData.year_built) : null,
+      floors: propertyData.floors ? Number(propertyData.floors) : null,
+      parking_spaces: propertyData.parking_spaces ? Number(propertyData.parking_spaces) : null,
+      
+      // Geographic data
+      latitude: propertyData.latitude ? Number(propertyData.latitude) : null,
+      longitude: propertyData.longitude ? Number(propertyData.longitude) : null,
+      location_id: propertyData.location_id || null,
+      
+      // Boolean fields
+      is_furnished: propertyData.is_furnished ? Boolean(propertyData.is_furnished) : null,
+      featured: false,
+      
+      // SEO fields
+      meta_title: propertyData.meta_title ? String(propertyData.meta_title).trim() : null,
+      meta_description: propertyData.meta_description ? String(propertyData.meta_description).trim() : null,
+      slug: propertyData.slug ? String(propertyData.slug).trim() : null,
+    };
 
-      // Insert the main property record
-      const { data: newProperty, error: propertyError } = await supabase
-          .from("properties")
-          .insert({
-            ...propertyData,
-            agent_id: userId,
-            status: "active",
-            views_count: 0,
-            inquiry_count: 0,
-            featured: false,
-            parking_spaces: propertyData.parking_spaces || 0,
-            is_furnished: propertyData.is_furnished || false,
-            published_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-      if (propertyError || !newProperty) {
-        console.error("Error creating property:", propertyError);
-        return null;
+    // Remove undefined values to avoid schema issues
+    Object.keys(propertyDataWithDefaults).forEach(key => {
+      if (propertyDataWithDefaults[key] === undefined) {
+        delete propertyDataWithDefaults[key];
       }
+    });
 
-      // Handle image uploads if provided
-      if (images && images.length > 0) {
-        const imageInserts = await Promise.all(
-            images.map(async (file, index) => {
-              try {
-                const fileExt = file.name.split(".").pop();
-                const fileName = `${newProperty.id}/${Date.now()}_${index}.${fileExt}`;
-
-                // Upload to Supabase storage
-                const { error: uploadError } = await supabase.storage
-                    .from("property-images")
-                    .upload(fileName, file);
-
-                if (uploadError) {
-                  console.error("Error uploading image:", uploadError);
-                  return null;
-                }
-
-                // Get public URL
-                const { data: publicUrlData } = supabase.storage
-                    .from("property-images")
-                    .getPublicUrl(fileName);
-
-                return {
-                  property_id: newProperty.id,
-                  image_url: publicUrlData.publicUrl,
-                  is_primary: index === 0,
-                  display_order: index,
-                };
-              } catch (error) {
-                console.error("Error processing image:", error);
-                return null;
+    console.log("Creating property with data:", {
+      title: propertyDataWithDefaults.title,
+      price: propertyDataWithDefaults.price,
+      property_type: propertyDataWithDefaults.property_type,
+      listing_type: propertyDataWithDefaults.listing_type,
+      imageCount: images?.length || 0,
+      amenityCount: amenities?.length || 0,
+      allFields: Object.keys(propertyDataWithDefaults)
+    });
+    
+    // Insert the property with explicit field mapping
+    const insertData = {
+      // Required fields
+      title: propertyDataWithDefaults.title,
+      price: propertyDataWithDefaults.price,
+      property_type: propertyDataWithDefaults.property_type,
+      listing_type: propertyDataWithDefaults.listing_type,
+      address: propertyDataWithDefaults.address,
+      city: propertyDataWithDefaults.city,
+      agent_id: userId,
+      
+      // System fields
+      status: "active",
+      views_count: 0,
+      inquiry_count: 0,
+      featured: false,
+      published_at: new Date().toISOString(),
+      
+      // Optional fields (only include if they have values)
+      ...(propertyDataWithDefaults.description && { description: propertyDataWithDefaults.description }),
+      ...(propertyDataWithDefaults.currency_code && { currency_code: propertyDataWithDefaults.currency_code }),
+      ...(propertyDataWithDefaults.landmark && { landmark: propertyDataWithDefaults.landmark }),
+      ...(propertyDataWithDefaults.bedrooms !== null && { bedrooms: propertyDataWithDefaults.bedrooms }),
+      ...(propertyDataWithDefaults.bathrooms !== null && { bathrooms: propertyDataWithDefaults.bathrooms }),
+      ...(propertyDataWithDefaults.area_sqft !== null && { area_sqft: propertyDataWithDefaults.area_sqft }),
+      ...(propertyDataWithDefaults.square_feet !== null && { square_feet: propertyDataWithDefaults.square_feet }),
+      ...(propertyDataWithDefaults.lot_size !== null && { lot_size: propertyDataWithDefaults.lot_size }),
+      ...(propertyDataWithDefaults.year_built !== null && { year_built: propertyDataWithDefaults.year_built }),
+      ...(propertyDataWithDefaults.floors !== null && { floors: propertyDataWithDefaults.floors }),
+      ...(propertyDataWithDefaults.parking_spaces !== null && { parking_spaces: propertyDataWithDefaults.parking_spaces }),
+      ...(propertyDataWithDefaults.latitude !== null && { latitude: propertyDataWithDefaults.latitude }),
+      ...(propertyDataWithDefaults.longitude !== null && { longitude: propertyDataWithDefaults.longitude }),
+      ...(propertyDataWithDefaults.location_id && { location_id: propertyDataWithDefaults.location_id }),
+      ...(propertyDataWithDefaults.is_furnished !== null && { is_furnished: propertyDataWithDefaults.is_furnished }),
+      ...(propertyDataWithDefaults.meta_title && { meta_title: propertyDataWithDefaults.meta_title }),
+      ...(propertyDataWithDefaults.meta_description && { meta_description: propertyDataWithDefaults.meta_description }),
+      ...(propertyDataWithDefaults.slug && { slug: propertyDataWithDefaults.slug }),
+    };
+    
+    console.log("Final insert data:", insertData);
+    
+    // Insert the property with proper error handling
+    const { data: newProperty, error: propertyError } = await supabase
+      .from("properties")
+      .insert(insertData)
+      .select()
+      .single();
+    
+    if (propertyError) {
+      console.error("Property creation error details:", {
+        code: propertyError.code,
+        message: propertyError.message,
+        details: propertyError.details,
+        hint: propertyError.hint,
+        propertyData: propertyDataWithDefaults
+      });
+      
+      // Handle specific database errors
+      if (propertyError.code === '23505') {
+        throw new Error("A property with this information already exists");
+      } else if (propertyError.code === '23502') {
+        throw new Error(`Missing required field: ${propertyError.message}`);
+      } else if (propertyError.code === '42703') {
+        throw new Error("Database schema error. Please contact support.");
+      }
+      
+      throw new Error(`Failed to create property: ${propertyError.message}`);
+    }
+    
+    if (!newProperty) {
+      throw new Error("Property created but no data returned");
+    }
+    
+    console.log("Property created successfully:", newProperty.id);
+    
+    // Handle image uploads if provided
+    if (images && images.length > 0) {
+      console.log(`Uploading ${images.length} images...`);
+      
+      try {
+        const imageInserts = await Promise.allSettled(
+          images.map(async (file, index) => {
+            try {
+              // Validate file
+              if (!file || file.size === 0) {
+                throw new Error(`Invalid file at index ${index}`);
               }
-            })
+              
+              if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                throw new Error(`File ${file.name} is too large (max 5MB)`);
+              }
+              
+              const fileExt = file.name.split(".").pop()?.toLowerCase();
+              if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+                throw new Error(`Invalid file type for ${file.name}. Use JPG, PNG, or WebP`);
+              }
+              
+              const fileName = `${newProperty.id}/${Date.now()}_${index}.${fileExt}`;
+              
+              // Upload file to storage
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from("property-images")
+                .upload(fileName, file, {
+                  cacheControl: '3600',
+                  upsert: false
+                });
+              
+              if (uploadError) {
+                console.error("Image upload error:", uploadError);
+                throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+              }
+              
+              // Get public URL
+              const { data: publicUrlData } = supabase.storage
+                .from("property-images")
+                .getPublicUrl(fileName);
+              
+              if (!publicUrlData?.publicUrl) {
+                throw new Error(`Failed to get public URL for ${fileName}`);
+              }
+              
+              return {
+                property_id: newProperty.id,
+                image_url: publicUrlData.publicUrl,
+                is_primary: index === 0,
+                display_order: index,
+              };
+            } catch (error) {
+              console.error(`Error processing image ${index}:`, error);
+              throw error;
+            }
+          })
         );
-
-        // Filter out failed uploads and insert successful ones
-        const validImages = imageInserts.filter(img => img !== null) as PropertyImage[];
+        
+        // Filter successful uploads and log failures
+        const validImages: PropertyImage[] = [];
+        const failedUploads: string[] = [];
+        
+        imageInserts.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value) {
+            validImages.push(result.value);
+          } else {
+            failedUploads.push(`Image ${index + 1}: ${result.reason}`);
+          }
+        });
+        
+        if (failedUploads.length > 0) {
+          console.warn("Some images failed to upload:", failedUploads);
+        }
+        
+        // Insert image metadata
         if (validImages.length > 0) {
           const { error: imagesError } = await supabase
-              .from("property_images")
-              .insert(validImages);
-
+            .from("property_images")
+            .insert(validImages);
+          
           if (imagesError) {
             console.error("Error saving image metadata:", imagesError);
+            // Continue execution but log the error
+          } else {
+            console.log(`${validImages.length} images uploaded successfully`);
           }
+        } else if (images.length > 0) {
+          console.warn("No images were successfully uploaded");
         }
+        
+      } catch (imageError) {
+        console.error("Image processing error:", imageError);
+        // Don't fail the whole operation for image errors, but log them
       }
-
-      // Handle amenity associations if provided
-      if (amenities && amenities.length > 0) {
+    }
+    
+    // Handle amenities if provided
+    if (amenities && amenities.length > 0) {
+      console.log(`Adding ${amenities.length} amenities...`);
+      
+      try {
         const amenityInserts = amenities.map(amenityId => ({
           property_id: newProperty.id,
           amenity_id: amenityId
         }));
-
+        
         const { error: amenitiesError } = await supabase
-            .from("property_amenities")
-            .insert(amenityInserts);
-
+          .from("property_amenities")
+          .insert(amenityInserts);
+        
         if (amenitiesError) {
           console.error("Error saving amenities:", amenitiesError);
+          // Continue execution but log the error
+        } else {
+          console.log("Amenities added successfully");
         }
+      } catch (amenityError) {
+        console.error("Amenity processing error:", amenityError);
+        // Don't fail the whole operation for amenity errors
       }
-
-      // Log the activity for audit trail
-      try {
-        await supabase
-            .from("activity_logs")
-            .insert({
-              user_id: userId,
-              action: "property_created",
-              entity_type: "property",
-              entity_id: newProperty.id,
-              details: { title: newProperty.title }
-            });
-      } catch (error) {
-        console.error("Error logging activity:", error);
-        // Don't fail property creation for logging issues
-      }
-
-      return newProperty;
-    } catch (error) {
-      console.error("Error in createProperty:", error);
-      return null;
     }
+    
+    // Log the activity (non-blocking)
+    try {
+      await supabase
+        .from("activity_logs")
+        .insert({
+          user_id: userId,
+          action: "property_created",
+          entity_type: "property",
+          entity_id: newProperty.id,
+          details: { title: newProperty.title }
+        });
+    } catch (error) {
+      console.error("Error logging activity:", error);
+      // Don't fail property creation for this
+    }
+    
+    console.log("Property creation completed successfully");
+    return newProperty;
+  } catch (error) {
+    console.error("Error in createProperty:", error);
+    throw error; // Re-throw to be handled by the calling component
   }
+}
 
   /**
    * Record a property view for analytics
    * Updates view count and tracks user engagement
    */
-  static async recordPropertyView(propertyId: string, userId?: string): Promise<void> {
+  static async recordPropertyView(
+    propertyId: string,
+    userId?: string
+  ): Promise<void> {
     try {
       // Insert into property_views table (trigger will auto-increment views_count)
-      const { error } = await supabase
-          .from("property_views")
-          .insert({
-            property_id: propertyId,
-            user_id: userId || null,
-            viewed_at: new Date().toISOString()
-          });
+      const { error } = await supabase.from("property_views").insert({
+        property_id: propertyId,
+        user_id: userId || null,
+        viewed_at: new Date().toISOString(),
+      });
 
       if (error) {
         console.error("Error recording property view:", error);
@@ -857,11 +1081,14 @@ export class PropertiesService {
    * Get all properties by a specific agent
    * Used for agent profile pages and dashboards
    */
-  static async getPropertiesByAgent(agentId: string): Promise<PropertyListing[]> {
+  static async getPropertiesByAgent(
+    agentId: string
+  ): Promise<PropertyListing[]> {
     try {
       const { data: properties, error } = await supabase
-          .from("v_active_properties")
-          .select(`
+        .from("v_active_properties")
+        .select(
+          `
           id,
           title,
           price,
@@ -879,9 +1106,10 @@ export class PropertiesService {
           featured,
           views_count,
           created_at
-        `)
-          .eq("agent_id", agentId)
-          .order("created_at", { ascending: false });
+        `
+        )
+        .eq("agent_id", agentId)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching agent properties:", error);
@@ -903,9 +1131,9 @@ export class PropertiesService {
     try {
       // Get property images for storage cleanup
       const { data: images, error: imagesError } = await supabase
-          .from("property_images")
-          .select("image_url")
-          .eq("property_id", propertyId);
+        .from("property_images")
+        .select("image_url")
+        .eq("property_id", propertyId);
 
       if (imagesError) {
         console.error("Error fetching property images:", imagesError);
@@ -914,17 +1142,17 @@ export class PropertiesService {
       // Delete images from storage
       if (images && images.length > 0) {
         const filePaths = images
-            .map(img => {
-              const url = img.image_url;
-              const match = url.match(/property-images\/(.+)$/);
-              return match ? match[1] : null;
-            })
-            .filter(Boolean) as string[];
+          .map((img) => {
+            const url = img.image_url;
+            const match = url.match(/property-images\/(.+)$/);
+            return match ? match[1] : null;
+          })
+          .filter(Boolean) as string[];
 
         if (filePaths.length > 0) {
           const { error: storageError } = await supabase.storage
-              .from("property-images")
-              .remove(filePaths);
+            .from("property-images")
+            .remove(filePaths);
 
           if (storageError) {
             console.error("Error deleting images from storage:", storageError);
@@ -935,9 +1163,9 @@ export class PropertiesService {
 
       // Delete the property (cascading deletes will handle related records)
       const { error } = await supabase
-          .from("properties")
-          .delete()
-          .eq("id", propertyId);
+        .from("properties")
+        .delete()
+        .eq("id", propertyId);
 
       if (error) {
         console.error("Error deleting property:", error);
@@ -955,7 +1183,10 @@ export class PropertiesService {
    * Get dashboard statistics for agents and admins
    * Provides property counts, inquiries, and featured properties
    */
-  static async getDashboardStats(userId: string, role: string): Promise<DashboardStats> {
+  static async getDashboardStats(
+    userId: string,
+    role: string
+  ): Promise<DashboardStats> {
     try {
       // Determine if user is an agent (for filtering)
       const isAgent = role === "agent";
@@ -963,25 +1194,27 @@ export class PropertiesService {
 
       // Get property counts
       const { count: totalProperties } = await supabase
-          .from("properties")
-          .select("*", { count: "exact", head: true })
-          .match(agentCondition);
+        .from("properties")
+        .select("*", { count: "exact", head: true })
+        .match(agentCondition);
 
       const { count: activeProperties } = await supabase
-          .from("properties")
-          .select("*", { count: "exact", head: true })
-          .match({ ...agentCondition, status: "active" });
+        .from("properties")
+        .select("*", { count: "exact", head: true })
+        .match({ ...agentCondition, status: "active" });
 
       // Get recent inquiries
       const { data: inquiries, error: inquiriesError } = await supabase
-          .from("inquiries")
-          .select(`
+        .from("inquiries")
+        .select(
+          `
           *,
           property:properties(title, address, city)
-        `)
-          .match(isAgent ? { agent_id: userId } : {})
-          .order("created_at", { ascending: false })
-          .limit(5);
+        `
+        )
+        .match(isAgent ? { agent_id: userId } : {})
+        .order("created_at", { ascending: false })
+        .limit(5);
 
       if (inquiriesError) {
         console.error("Error fetching inquiries:", inquiriesError);
@@ -989,8 +1222,9 @@ export class PropertiesService {
 
       // Get featured properties
       const { data: featuredProperties, error: featuredError } = await supabase
-          .from("v_featured_properties")
-          .select(`
+        .from("v_featured_properties")
+        .select(
+          `
           id,
           title,
           price,
@@ -1008,9 +1242,10 @@ export class PropertiesService {
           featured,
           views_count,
           created_at
-        `)
-          .match(agentCondition)
-          .limit(5);
+        `
+        )
+        .match(agentCondition)
+        .limit(5);
 
       if (featuredError) {
         console.error("Error fetching featured properties:", featuredError);
@@ -1042,8 +1277,8 @@ export class PropertiesService {
   static async createSampleProperties(userId: string): Promise<number> {
     try {
       console.log("Creating sample properties for user:", userId);
-      const { data, error } = await supabase.rpc('insert_sample_properties', {
-        agent_user_id: userId
+      const { data, error } = await supabase.rpc("insert_sample_properties", {
+        agent_user_id: userId,
       });
 
       if (error) {
@@ -1063,12 +1298,15 @@ export class PropertiesService {
    * Toggle featured status of a property
    * Used by agents and admins to promote listings
    */
-  static async toggleFeatured(propertyId: string, featured: boolean): Promise<boolean> {
+  static async toggleFeatured(
+    propertyId: string,
+    featured: boolean
+  ): Promise<boolean> {
     try {
       const { error } = await supabase
-          .from("properties")
-          .update({ featured: !featured })
-          .eq("id", propertyId);
+        .from("properties")
+        .update({ featured: !featured })
+        .eq("id", propertyId);
 
       if (error) {
         console.error("Error toggling featured status:", error);
@@ -1086,12 +1324,15 @@ export class PropertiesService {
    * Update property status (active, pending, sold, inactive)
    * Used for property lifecycle management
    */
-  static async updatePropertyStatus(propertyId: string, status: string): Promise<boolean> {
+  static async updatePropertyStatus(
+    propertyId: string,
+    status: string
+  ): Promise<boolean> {
     try {
       const { error } = await supabase
-          .from("properties")
-          .update({ status })
-          .eq("id", propertyId);
+        .from("properties")
+        .update({ status })
+        .eq("id", propertyId);
 
       if (error) {
         console.error("Error updating property status:", error);

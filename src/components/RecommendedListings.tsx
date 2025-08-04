@@ -20,7 +20,7 @@ const RecommendedListings = () => {
     try {
       setLoading(true);
       setError(null);
-      const recentProperties = await PropertiesService.getRecentProperties(8);
+      const recentProperties = await PropertiesService.getRecentProperties(4);
       
       if (recentProperties.length === 0) {
         setError('No properties found. Try creating some sample properties.');
@@ -51,7 +51,7 @@ const RecommendedListings = () => {
   }
 
   return (
-    <section className="recommended-listings-container w-full max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <section className="recommended-listings-container w-full mx-auto px-4 py-8 flex flex-col gap-6">
       <div className="flex items-center justify-between w-full">
         <h2 className="text-2xl font-semibold">Recent Properties</h2>
         <Link to="/search">
@@ -84,13 +84,13 @@ const RecommendedListings = () => {
           </button>
         </div>
       ) : (
-        <div className="flex overflow-x-auto hide-scrollbar gap-4">
+        <div className="flex w-full overflow-x-auto hide-scrollbar justify-between">
           {properties.map((property) => (
             <div key={property.id} className="flex-shrink-0">
               <ListingCard
                 id={property.id}
                 imageUrl={property.primary_image || '/placeholder-property.jpg'}
-                price={`${property.price.toLocaleString()}${property.listing_type === 'rent' ? '/month' : ''}`}
+                price={`${property.price.toLocaleString()}`}
                 bedrooms={property.bedrooms || 0}
                 bathrooms={property.bathrooms || 0}
                 addressLine1={property.address}

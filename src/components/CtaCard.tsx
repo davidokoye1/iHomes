@@ -7,10 +7,23 @@ interface CtaCardProps {
   bedrooms: string | number;
   bathrooms: string | number;
   price: string | number;
+  listingType: string | number;
 }
 
-const CtaCard = ({ location, bedrooms, bathrooms, price }: CtaCardProps) => {
+const CtaCard = ({ location, bedrooms, bathrooms, price, listingType }: CtaCardProps) => {
   const [liked, setLiked] = useState(false);
+  const formatPrice = (price: number | string) => {
+    let numericPrice;
+
+    if (typeof price === 'string') {
+      // Remove non-numeric characters except decimal point
+      numericPrice = parseFloat(price.replace(/[^0-9.]/g, ''));
+    } else {
+      numericPrice = price;
+    }
+
+    return `GMD ${numericPrice.toLocaleString()}${listingType === "rent" ? "/month" : ""}`;
+  };
 
   const toggleLike = () => setLiked((prev) => !prev);
 
@@ -37,7 +50,7 @@ const CtaCard = ({ location, bedrooms, bathrooms, price }: CtaCardProps) => {
         </div>
       </div>
       <div className="flex flex-col items-start justify-center w-full gap-[18px]">
-        <h2>{price}</h2>
+        <h2>{formatPrice(price)}</h2>
         <Button variant="black">Book A Consultation</Button>
       </div>
     </div>

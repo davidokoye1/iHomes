@@ -2,28 +2,14 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LogoIcon from "../assets/Path.png"; // Assuming you have a logo icon
 import {
-  Heart,
-  Share2,
-  MapPin,
-  Bed,
-  Bath,
-  Square,
   Car,
-  Phone,
-  Mail,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Calendar,
   Eye,
-  Star,
-  Check,
   Grid3X3,
   Home,
   Wifi,
   Utensils,
-  Waves,
-  Mountain,
   Droplet,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -31,7 +17,7 @@ import Button from "../components/Button";
 import ListingCard from "../components/ListingCard";
 import { PropertiesService } from "../services/properties";
 import type { PropertyWithImages, PropertyListing } from "../types/database";
-
+import type {Profile} from "../types/database"
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -39,7 +25,7 @@ const PropertyDetails = () => {
   const [suggestions, setSuggestions] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  // const [isFavorite, setIsFavorite] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
 
   useEffect(() => {
@@ -232,25 +218,25 @@ const PropertyDetails = () => {
               </div>
             ))}
 
-            {/* Fill remaining slots if less than 4 additional images */}
-            {Array.from(
-              { length: Math.max(0, 4 - (property.images.length - 1)) },
-              (_, index) => (
-                <div
-                  key={`placeholder-${index}`}
-                  className="bg-gray-200 h-[256.5px] w-full sharp-inner flex items-center justify-center"
-                >
-                  <Home className="h-8 w-8 text-gray-400" />
-                </div>
-              )
-            )}
+            {/*/!* Fill remaining slots if less than 4 additional images *!/*/}
+            {/*{Array.from(*/}
+            {/*  { length: Math.max(0, 4 - (property.images.length - 1)) },*/}
+            {/*  (_, index) => (*/}
+            {/*    <div*/}
+            {/*      key={`placeholder-${index}`}*/}
+            {/*      className="bg-gray-200 h-[256.5px] w-full sharp-inner flex items-center justify-center"*/}
+            {/*    >*/}
+            {/*      <Home className="h-8 w-8 text-gray-400" />*/}
+            {/*    </div>*/}
+            {/*  )*/}
+            {/*)}*/}
           </div>
         </div>
 
         {/* Location and Property Info */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-[32px] font-semibold mb-1">
-            {property.property_type} In {property.city}, GM
+            {property.property_type.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} In {property.city}, GM
           </h2>
           <p className="text-gray-600 text-[20px] mb-4">
             {property.address} <br />
@@ -315,8 +301,8 @@ const PropertyDetails = () => {
                 <span className="text-white text-xl font-bold">A</span>
               </div>
               <div>
-                <p className="font-medium text-sm">Agent</p>
-                <p className="text-sm text-gray-700">Property Agent</p>
+                <p className="font-medium text-sm">{property.agent_name}</p>
+                <p className="text-sm text-gray-700">{property.agency_name}</p>
               </div>
             </div>
 
@@ -391,18 +377,7 @@ const PropertyDetails = () => {
                 What This Place Offers
               </h3>
               <div className="grid grid-cols-2 gap-y-[24px] gap-x-4 text-[20px]">
-                {property.has_pool && (
-                  <div className="flex items-center gap-2">
-                    <Waves className="h-5 w-5" />
-                    <span>Pool</span>
-                  </div>
-                )}
-                {property.has_garden && (
-                  <div className="flex items-center gap-2">
-                    <Mountain className="h-5 w-5" />
-                    <span>Garden</span>
-                  </div>
-                )}
+                
                 {property.is_furnished && (
                   <div className="flex items-center gap-2">
                     <Home className="h-5 w-5" />

@@ -77,6 +77,7 @@ const HeroSection = () => {
               bedrooms={getBedroomsDisplay()}
               bathrooms={getBathroomsDisplay()}
               price={getPriceDisplay()}
+              listingType={featuredProperty.listing_type}
             />
           </div>
         ) : (

@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
-  gap: 48px;
+  gap: 12px;
   margin: auto;
   max-width: 600px;
 }
@@ -34,7 +34,7 @@
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0px;
   width: 100%;
   padding-bottom: 20px; /* Adjusted for dropdown space */
 }
