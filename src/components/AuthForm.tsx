@@ -288,9 +288,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const handleNext = () => {
     if (!validateCurrentStep()) return;
     
-    // If role was just selected, we need to recalculate filtered steps
+    // If role was just selected, recalculate filtered steps
     if (currentStep.id === 'role') {
-      const newFilteredSteps = getFilteredSteps();
       setCurrentStepIndex(1); // Move to next step in filtered list
     } else {
       setCurrentStepIndex(prev => prev + 1);
@@ -312,7 +311,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         
         const redirectUrl = `${window.location.origin}/auth/callback`;
         
-
 
         // Step 1: Create the auth user WITHOUT metadata to avoid trigger issues
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -345,25 +343,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
         // Step 2: Create the profile manually after user creation
         try {
-          const profileData: any = {
+          const profileData = {
             id: data.user.id,
             email: formData.email.trim(),
             full_name: formData.fullName.trim(),
             role: formData.role,
             email_confirmed: false,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            agency_name: formData.role === 'agent' ? formData.agencyName?.trim() || null : null,
+            license_number: formData.role === 'agent' ? formData.licenseNumber?.trim() || null : null,
+            phone: formData.role === 'agent' ? formData.phone?.replace(/\s/g, '') || null : null,
+            whatsapp_number: formData.role === 'agent' ? formData.whatsappNumber?.replace(/\s/g, '') || null : null,
+            bio: formData.role === 'agent' ? formData.bio?.trim() || null : null,
+            website: formData.role === 'agent' ? formData.website?.trim() || null : null
           };
-
-          // Add role-specific data for agents
-          if (formData.role === 'agent') {
-            profileData.agency_name = formData.agencyName?.trim() || null;
-            profileData.license_number = formData.licenseNumber?.trim() || null;
-            profileData.phone = formData.phone?.replace(/\s/g, '') || null;
-            profileData.whatsapp_number = formData.whatsappNumber?.replace(/\s/g, '') || null;
-            profileData.bio = formData.bio?.trim() || null;
-            profileData.website = formData.website?.trim() || null;
-          }
 
           const { error: profileError } = await supabase
             .from('profiles')
@@ -429,15 +423,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
           console.error("Error updating last login:", error);
         }
       }
-    } catch (err: any) {
-      console.error("Auth error:", err);
-      let errorMessage = "Something went wrong. Please try again.";
-      
-      if (err.message && err.message.includes("fetch")) {
-        errorMessage = "Network error. Please check your connection and try again.";
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? 
+        (err.message.includes("fetch") ? 
+          "Network error. Please check your connection and try again." : 
+          err.message) : 
+        "Something went wrong. Please try again.";
       
       toast.error(errorMessage);
     } finally {
@@ -463,9 +454,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       if (error) throw error;
       toast.success("Confirmation email sent! Please check your inbox.");
-    } catch (error: any) {
-      console.error("Error resending confirmation:", error);
-      toast.error(error.message || "Failed to resend confirmation email");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? 
+        error.message : 
+        'Failed to resend confirmation email';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -607,7 +600,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         placeholder={field.placeholder}
         value={value}
         onChange={handleInputChange}
-        required={field.required}
       />
     );
   };

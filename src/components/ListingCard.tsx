@@ -45,9 +45,15 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
     if (typeof price === 'string') {
       // Remove non-numeric characters except decimal point
-      numericPrice = parseFloat(price.replace(/[^0-9.]/g, ''));
+      const cleaned = price.replace(/[^0-9.]/g, '');
+      numericPrice = parseFloat(cleaned);
     } else {
       numericPrice = price;
+    }
+
+    // Handle invalid numbers
+    if (isNaN(numericPrice)) {
+      return "GMD Price unavailable";
     }
 
     return `GMD ${numericPrice.toLocaleString()}${listingType === "rent" ? "/m" : ""}`;
@@ -65,7 +71,10 @@ const ListingCard: React.FC<ListingCardProps> = ({
             alt="Property"
             className="w-full h-[321px] object-cover rounded-lg"
             onError={(e) => {
-              e.target.src = PlaceHolder;
+              const target = e.target as HTMLImageElement;
+              if (target) {
+                target.src = PlaceHolder;
+              }
             }}
         />
         <div className="absolute flex top-2 right-2 gap-1">

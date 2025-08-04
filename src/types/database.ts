@@ -79,6 +79,9 @@ export interface PropertyImage {
   created_at: string;
 }
 
+// Type for inserting new property images (omits auto-generated fields)
+export type PropertyImageInsert = Omit<PropertyImage, 'id' | 'created_at'>;
+
 export interface PropertyWithImages extends Property {
   images: PropertyImage[];
   primary_image?: string;
@@ -271,6 +274,7 @@ export interface SearchParams {
   min_bedrooms?: number;
   max_bedrooms?: number;
   min_bathrooms?: number;
+  max_bathrooms?: number;
   city?: string;
   location_id?: string;
   amenity_ids?: string[];

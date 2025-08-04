@@ -252,7 +252,7 @@ const SearchResults = () => {
     });
   }, []);
 
-  const handleQuickFilter = useCallback((key: keyof FilterState, value: any) => {
+  const handleQuickFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     const newFilters = { 
       ...filters, 
       [key]: filters[key] === value ? undefined : value 
@@ -294,7 +294,7 @@ const SearchResults = () => {
     performSearch(filters, nextPage, true);
   }, [searchState.page, filters, performSearch]);
 
-  const removeFilter = useCallback((key: keyof FilterState) => {
+  const removeFilter = useCallback((key: keyof FilterState | 'price') => {
     const newFilters = { ...filters };
     if (key === 'price') {
       delete newFilters.min_price;
@@ -317,7 +317,7 @@ const SearchResults = () => {
     const urlFilters = parseUrlFilters();
     setFilters(urlFilters);
     performSearch(urlFilters, 1);
-  }, [searchParams]); // Only depend on searchParams to avoid infinite loops
+  }, [searchParams, parseUrlFilters, performSearch]);
 
   // Render helpers
   const renderActiveFilters = () => {
@@ -372,7 +372,7 @@ const SearchResults = () => {
               bedrooms={property.bedrooms || 0}
               bathrooms={property.bathrooms || 0}
               addressLine1={property.address}
-              addressLine2={`${property.city}${property.location?.region ? `, ${property.location.region}` : ''}`}
+              addressLine2={property.city}
               propertyType={property.property_type}
               listingType={property.listing_type}
               featured={property.featured}
@@ -526,9 +526,9 @@ const SearchHeader = ({
   loading 
 }: {
   filters: FilterState;
-  onFilterChange: (key: keyof FilterState, value: any) => void;
+  onFilterChange: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onApplyFilters: () => void;
-  onQuickFilter: (key: keyof FilterState, value: any) => void;
+  onQuickFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onShowFilters: () => void;
   activeFilterCount: number;
   loading: boolean;
@@ -594,7 +594,7 @@ const SearchHeader = ({
           For Rent
         </QuickFilterButton>
         <QuickFilterButton
-          active={filters.featured_only}
+          active={!!filters.featured_only}
           onClick={() => onQuickFilter('featured_only', true)}
         >
           <Star className="h-4 w-4 inline mr-1" />
@@ -744,7 +744,7 @@ const FiltersModal = ({
 }: {
   filters: FilterState;
   amenities: Amenity[];
-  onFilterChange: (key: keyof FilterState, value: any) => void;
+  onFilterChange: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onAmenityToggle: (amenityId: string) => void;
   onApplyFilters: () => void;
   onClearFilters: () => void;
@@ -786,7 +786,7 @@ const FiltersModal = ({
                   <FilterButton
                     key={type.value}
                     active={filters.property_type === type.value}
-                    onClick={() => onFilterChange('property_type', type.value || undefined)}
+                    onClick={() => onFilterChange('property_type', type.value as PropertyListing['property_type'] || undefined)}
                   >
                     <IconComponent className="h-4 w-4" />
                     <span className="text-sm">{type.label}</span>

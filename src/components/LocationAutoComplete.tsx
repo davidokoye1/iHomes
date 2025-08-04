@@ -1,6 +1,5 @@
 // src/components/LocationAutocomplete.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { debounce } from 'lodash-es';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 interface Location {
@@ -29,7 +28,6 @@ export const LocationAutocomplete = ({
   const [query, setQuery] = useState('');
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (query.length < 2) {
@@ -39,7 +37,6 @@ export const LocationAutocomplete = ({
 
     const fetchLocations = async () => {
       setIsLoading(true);
-      setError(null);
       
       try {
         // Search locations with trigram similarity
@@ -54,7 +51,6 @@ export const LocationAutocomplete = ({
         if (fetchError) throw fetchError;
         setLocations(data || []);
       } catch (err) {
-        setError('Failed to fetch locations');
         console.error('Location search error:', err);
       } finally {
         setIsLoading(false);
@@ -78,6 +74,9 @@ export const LocationAutocomplete = ({
         
         if (data) {
           setQuery(`${data.name}${data.region ? `, ${data.region}` : ''}`);
+        }
+        else{
+          console.log(error)
         }
       };
       
@@ -133,11 +132,6 @@ export const LocationAutocomplete = ({
         </ul>
       )}
 
-      {error && (
-        <div role="alert" className="mt-1 text-sm text-red-500">
-          {error}
-        </div>
-      )}
     </div>
   );
 };

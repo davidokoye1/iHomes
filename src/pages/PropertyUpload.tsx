@@ -22,7 +22,7 @@ import {
 import Navbar from '../components/Navbar';
 import Button from '../components/Button';
 import { PropertiesService } from '../services/properties';
-import type { PropertyFormData, Amenity, Location } from '../types/database';
+import type { PropertyFormData, Amenity, Location, PropertyType } from '../types/database';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 
@@ -198,12 +198,10 @@ const PropertyUpload = () => {
   const [completedSteps, setCompletedSteps] = useState(new Set<number>());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [formData, setFormData] = useState<PropertyFormData>({
     title: '',
     description: '',
@@ -217,19 +215,7 @@ const PropertyUpload = () => {
     square_feet: 0,
     year_built: new Date().getFullYear(),
     parking_spaces: 0,
-    is_furnished: false,
-    has_pool: false,
-    has_garden: false,
-    has_balcony: false,
-    has_gym: false,
-    has_security: false,
-    has_parking: false,
-    has_air_conditioning: false,
-    has_heating: false,
-    has_internet: false,
-    has_tv: false,
-    has_kitchen: false,
-    has_laundry: false
+    is_furnished: false
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -253,10 +239,6 @@ const PropertyUpload = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load locations
-        const locationsData = await PropertiesService.getLocations();
-        setLocations(locationsData);
-        
         // Load amenities
         const amenitiesData = await PropertiesService.getAmenities();
         setAmenities(amenitiesData);
@@ -507,7 +489,7 @@ const PropertyUpload = () => {
   }, [previewUrls]);
 
   // Handle form input changes
-  const handleInputChange = useCallback((field: keyof PropertyFormData, value: any) => {
+  const handleInputChange = useCallback(<K extends keyof PropertyFormData>(field: K, value: PropertyFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -531,10 +513,10 @@ const PropertyUpload = () => {
         if (formData.title.length < 5) {
           newErrors.title = 'Title must be at least 5 characters';
         }
-        if (!formData.description.trim()) {
+        if (!formData.description?.trim()) {
           newErrors.description = 'Description is required';
         }
-        if (formData.description.length < 20) {
+        if (formData.description && formData.description.length < 20) {
           newErrors.description = 'Description must be at least 20 characters';
         }
         break;
@@ -546,13 +528,13 @@ const PropertyUpload = () => {
         if (!formData.listing_type) {
           newErrors.listing_type = 'Listing type is required';
         }
-        if (formData.bedrooms < 0) {
+        if (formData.bedrooms && formData.bedrooms < 0) {
           newErrors.bedrooms = 'Bedrooms cannot be negative';
         }
-        if (formData.bathrooms < 0) {
+        if (formData.bathrooms && formData.bathrooms < 0) {
           newErrors.bathrooms = 'Bathrooms cannot be negative';
         }
-        if (formData.square_feet < 0) {
+        if (formData.square_feet && formData.square_feet < 0) {
           newErrors.square_feet = 'Square feet cannot be negative';
         }
         break;
@@ -635,30 +617,20 @@ const handleSubmit = useCallback(async () => {
     console.log("Form data:", formData);
     console.log("Selected images:", selectedImages?.length || 0);
     
-    // CRITICAL: Check authentication PROPERLY
-    // CRITICAL: Check authentication PROPERLY
-    let authData, user;
-    try {
-      const authResult = await supabase.auth.getUser();
-      authData = authResult.data;
-      const userError = authResult.error;
-      
-      if (userError) {
-        console.error("Auth error:", userError);
-        throw new Error(`Authentication failed: ${userError.message}`);
-      }
-      
-      if (!authData?.user) {
-        console.error("No user data returned");
-        throw new Error('User not authenticated. Please log in and try again.');
-      }
-      
-      user = authData.user;
-      console.log("✓ User authenticated:", user.id);
-    } catch (authError) {
-      console.error("Authentication check failed:", authError);
-      throw new Error('Authentication failed. Please refresh and try again.');
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error("Auth error:", authError);
+      throw new Error(`Authentication failed: ${authError.message}`);
     }
+    
+    if (!user) {
+      console.error("No user data returned");
+      throw new Error('User not authenticated. Please log in and try again.');
+    }
+    
+    console.log("✓ User authenticated:", user.id);
     
     // CRITICAL: Validate form BEFORE proceeding
     console.log("Validating form...");
@@ -700,26 +672,14 @@ const handleSubmit = useCallback(async () => {
     
     console.log("✓ Required fields validation passed");
     
-    // Prepare amenities data with error handling
-    let selectedAmenityIds = [];
-    try {
-      if (amenities && Array.isArray(amenities)) {
-        selectedAmenityIds = amenities
-          .filter(amenity => {
-            const isSelected = formData[amenity.id as keyof PropertyFormData] === true;
-            console.log(`Amenity ${amenity.id}: ${isSelected}`);
-            return isSelected;
-          })
-          .map(amenity => amenity.id);
-      }
-      console.log("✓ Selected amenities:", selectedAmenityIds);
-    } catch (amenityError) {
-      console.error("Error processing amenities:", amenityError);
-      selectedAmenityIds = []; // Continue without amenities if there's an error
-    }
+    // Prepare amenities data
+    const selectedAmenityIds: string[] = amenities
+      .filter(amenity => formData[amenity.id as keyof PropertyFormData] === true)
+      .map(amenity => amenity.id);
+    console.log("✓ Selected amenities:", selectedAmenityIds);
     
     // Validate images with detailed logging
-    let validImages = [];
+    const validImages = [];
     if (selectedImages && selectedImages.length > 0) {
       console.log(`Validating ${selectedImages.length} images...`);
       
@@ -744,67 +704,38 @@ const handleSubmit = useCallback(async () => {
       console.log("⚠ No images selected");
     }
     
-    // CRITICAL: Prepare property data to match your exact schema
-    const propertyDataWithDefaults = {
-      // Required fields (match your schema exactly)
-      title: String(formData.title || '').trim(),
-      price: Number(formData.price) || 0,
+    // Prepare property data
+    const propertyData: PropertyFormData = {
+      title: formData.title.trim(),
+      description: formData.description?.trim() || '',
+      price: formData.price,
       property_type: formData.property_type,
       listing_type: formData.listing_type,
-      address: String(formData.address || '').trim(),
-      city: String(formData.city || '').trim(),
-      
-      // Optional text fields
-      description: formData.description ? String(formData.description).trim() : null,
-      currency_code: formData.currency_code || 'GMD',
-      landmark: formData.landmark ? String(formData.landmark).trim() : null,
-      
-      // Numeric fields (use your schema field names)
-      bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
-      bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
-      area_sqft: formData.area_sqft ? Number(formData.area_sqft) : null,
-      square_feet: formData.square_feet ? Number(formData.square_feet) : null,
-      lot_size: formData.lot_size ? Number(formData.lot_size) : null,
-      year_built: formData.year_built ? Number(formData.year_built) : null,
-      floors: formData.floors ? Number(formData.floors) : null,
-      parking_spaces: formData.parking_spaces ? Number(formData.parking_spaces) : null,
-      
-      // Geographic fields
-      latitude: formData.latitude ? Number(formData.latitude) : null,
-      longitude: formData.longitude ? Number(formData.longitude) : null,
-      location_id: formData.location_id || null,
-      
-      // Boolean fields
-      is_furnished: formData.is_furnished ? Boolean(formData.is_furnished) : null,
-      
-      // SEO fields
-      meta_title: formData.meta_title ? String(formData.meta_title).trim() : null,
-      meta_description: formData.meta_description ? String(formData.meta_description).trim() : null,
-      slug: formData.slug ? String(formData.slug).trim() : null,
+      address: formData.address.trim(),
+      city: formData.city.trim(),
+      bedrooms: formData.bedrooms,
+      bathrooms: formData.bathrooms,
+      square_feet: formData.square_feet,
+      year_built: formData.year_built,
+      parking_spaces: formData.parking_spaces,
+      is_furnished: formData.is_furnished
     };
     
     console.log("✓ Property data prepared:", {
-      ...propertyDataWithDefaults,
+      ...propertyData,
       amenityCount: selectedAmenityIds.length,
       imageCount: validImages.length
     });
     
-    // CRITICAL: Call the service with proper error handling
+    // Call the service to create property
     console.log("=== CALLING PROPERTIES SERVICE ===");
-    let result;
+    const result = await PropertiesService.createProperty({
+      ...propertyData,
+      amenities: selectedAmenityIds,
+      images: validImages
+    }, user.id);
     
-    try {
-      result = await PropertiesService.createProperty({
-        ...propertyDataWithDefaults,
-        amenities: selectedAmenityIds,
-        images: validImages
-      }, user.id);
-      
-      console.log("Service call completed, result:", result);
-    } catch (serviceError) {
-      console.error("PropertiesService.createProperty failed:", serviceError);
-      throw new Error(`Property creation failed: ${serviceError.message}`);
-    }
+    console.log("Service call completed, result:", result);
     
     if (!result) {
       console.error("Service returned null/undefined result");
@@ -856,53 +787,13 @@ const handleSubmit = useCallback(async () => {
       });
     }, 1500);
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('=== PROPERTY CREATION ERROR ===');
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      formData,
-      userId: authData?.user?.id
-    });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create property';
+    console.error('Error details:', errorMessage);
     
-    let errorMessage = 'Failed to create property. Please try again.';
-    
-    if (error instanceof Error) {
-      // Use the actual error message for better debugging
-      errorMessage = error.message;
-      
-      // Only modify error message for specific cases
-      if (error.message.toLowerCase().includes('storage') || 
-          error.message.toLowerCase().includes('upload')) {
-        errorMessage = 'Failed to upload images. Please check your files and try again.';
-      } else if (error.message.toLowerCase().includes('permission') || 
-                 error.message.toLowerCase().includes('unauthorized')) {
-        errorMessage = 'You do not have permission to create properties. Contact support.';
-      } else if (error.message.toLowerCase().includes('authentication') || 
-                 error.message.toLowerCase().includes('not authenticated')) {
-        errorMessage = 'Session expired. Please log in again.';
-        setTimeout(() => {
-          navigate('/login', { 
-            state: { from: location.pathname }
-          });
-        }, 2000);
-        return;
-      } else if (error.message.toLowerCase().includes('network') || 
-                 error.message.toLowerCase().includes('fetch')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-    }
-    
-    // Set error state
     setErrors({ submit: errorMessage });
-    
-    // Show error toast
-    toast.error(errorMessage, {
-      description: 'Check the console for more details'
-    });
-    
-  } finally {
-    console.log("Setting submitting to false");
+    toast.error(errorMessage);
     setSubmitting(false);
   }
 }, [
@@ -964,7 +855,7 @@ const handleSubmit = useCallback(async () => {
             }`}
             maxLength={1000}
           />
-          <p className="mt-1 text-sm text-gray-500">{formData.description.length}/1000 characters</p>
+          <p className="mt-1 text-sm text-gray-500">{(formData.description?.length || 0)}/1000 characters</p>
           
           {/* Enhanced Tips Component */}
           <div className="mt-6 p-4 bg-green-50 rounded-xl text-left">
@@ -1017,7 +908,7 @@ const handleSubmit = useCallback(async () => {
             ].map((type) => (
               <button
                 key={type.value}
-                onClick={() => handleInputChange('property_type', type.value)}
+                onClick={() => handleInputChange('property_type', type.value as PropertyType)}
                 className={`flex flex-col items-center p-4 rounded-xl border transition-all ${
                   formData.property_type === type.value
                     ? 'border-green-600 bg-green-50 text-green-700 font-medium'
@@ -1450,63 +1341,33 @@ const handleSubmit = useCallback(async () => {
             : 'Enter the monthly rent amount'}
         />
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            label="Furnished"
-            hint="Is the property fully or partially furnished?"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleInputChange('is_furnished', true)}
-                className={`p-3 rounded-xl border transition-all ${
-                  formData.is_furnished === true
-                    ? 'border-green-600 bg-green-50 text-green-700 font-medium'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => handleInputChange('is_furnished', false)}
-                className={`p-3 rounded-xl border transition-all ${
-                  formData.is_furnished === false
-                    ? 'border-green-600 bg-green-50 text-green-700 font-medium'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </FormField>
-          
-          <FormField
-            label="Parking"
-            hint="Is parking available for tenants/guests?"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleInputChange('has_parking', true)}
-                className={`p-3 rounded-xl border transition-all ${
-                  formData.has_parking === true
-                    ? 'border-green-600 bg-green-50 text-green-700 font-medium'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                Available
-              </button>
-              <button
-                onClick={() => handleInputChange('has_parking', false)}
-                className={`p-3 rounded-xl border transition-all ${
-                  formData.has_parking === false
-                    ? 'border-green-600 bg-green-50 text-green-700 font-medium'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                Not Available
-              </button>
-            </div>
-          </FormField>
-        </div>
+        <FormField
+          label="Furnished"
+          hint="Is the property fully or partially furnished?"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => handleInputChange('is_furnished', true)}
+              className={`p-3 rounded-xl border transition-all ${
+                formData.is_furnished === true
+                  ? 'border-green-600 bg-green-50 text-green-700 font-medium'
+                  : 'border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => handleInputChange('is_furnished', false)}
+              className={`p-3 rounded-xl border transition-all ${
+                formData.is_furnished === false
+                  ? 'border-green-600 bg-green-50 text-green-700 font-medium'
+                  : 'border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              No
+            </button>
+          </div>
+        </FormField>
         
         {/* Price Validation Hints */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">

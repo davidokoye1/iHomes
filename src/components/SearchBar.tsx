@@ -1,6 +1,6 @@
 // src/components/SearchBar.tsx - Enhanced with Database Integration
-import { useState, useRef, useEffect } from "react";
-import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search, Bath } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search } from "lucide-react";
 import Button from "./Button";
 import { useSearch } from "../hooks/useSearch";
 import { PropertiesService } from "../services/properties";
@@ -65,20 +65,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   
   // Database-driven state
   const [locations, setLocations] = useState<Location[]>([]);
-  const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load locations and amenities from database
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [locationsData, amenitiesData] = await Promise.all([
-          PropertiesService.getLocations(),
-          PropertiesService.getAmenities()
-        ]);
-        
+        const locationsData = await PropertiesService.getLocations();
         setLocations(locationsData);
-        setAmenities(amenitiesData);
       } catch (error) {
         console.error('Error loading search data:', error);
       } finally {

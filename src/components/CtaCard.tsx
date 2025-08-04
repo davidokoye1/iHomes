@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Heart } from "lucide-react";
 import FeaturedHomeProperties from "./FeaturedHomeProperties";
 import Button from "./Button";

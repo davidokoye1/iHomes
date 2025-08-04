@@ -52,13 +52,13 @@ const HeroSection = () => {
   };
 
   const getBedroomsDisplay = () => {
-    return featuredProperty ? featuredProperty.bedrooms : 0;
+    return featuredProperty ? `${featuredProperty.bedrooms}` : 0;
   };
   const getBathroomsDisplay = () => {
-    return featuredProperty ? featuredProperty.bathrooms : 0;
+    return featuredProperty ? `${featuredProperty.bathrooms}` : 0;
   };
   const getPriceDisplay = () => {
-    return featuredProperty ? `GMD ${featuredProperty.price}` : `GMD ${2000}`;
+    return featuredProperty ? `GMD ${featuredProperty.price}` : 'GMD 2000';
   };
   return (
     <section className="hero-section mt-[36px] flex flex-col items-start justify-center gap-[22px]">

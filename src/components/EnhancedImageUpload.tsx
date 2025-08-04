@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Image, Camera, Plus, X, Star, AlertCircle, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 
 // Type definitions
@@ -326,7 +326,7 @@ const EnhancedImageUpload: React.FC<EnhancedImageUploadProps> = ({
     }
   }, [primaryImageIndex, onPrimaryImageChange]);
 
-  const renderStep5 = useCallback(() => (
+  const renderStep5 = () => (
     <div className="max-w-3xl mx-auto">
       <div className="text-center mb-8">
         <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -508,17 +508,7 @@ const EnhancedImageUpload: React.FC<EnhancedImageUploadProps> = ({
         />
       </div>
     </div>
-  ), [
-    previewUrls, 
-    primaryImageIndex, 
-    errors, 
-    isDragOver, 
-    uploadingImages, 
-    isModalOpen, 
-    currentModalIndex,
-    maxImages,
-    maxFileSize
-  ]);
+  );
 
   return renderStep5();
 };

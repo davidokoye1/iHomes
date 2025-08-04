@@ -7,7 +7,7 @@ export const useSearch = () => {
   const [searchParams, setSearchParams] = useState<SearchParams>({});
   const navigate = useNavigate();
 
-  const updateSearchParam = useCallback((key: keyof SearchParams, value: any) => {
+  const updateSearchParam = useCallback((key: keyof SearchParams, value: string | number | string[] | boolean | null | undefined) => {
     setSearchParams(prev => ({
       ...prev,
       [key]: value

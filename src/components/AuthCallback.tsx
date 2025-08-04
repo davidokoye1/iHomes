@@ -1,75 +1,61 @@
-// src/components/AuthCallback.tsx
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
+import { toast } from "sonner";
 
 export default function AuthCallback() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('Processing auth callback...');
-        
-        // Get the access token and refresh token from URL parameters
+        const type = searchParams.get('type');
         const accessToken = searchParams.get('access_token');
         const refreshToken = searchParams.get('refresh_token');
-        const type = searchParams.get('type');
-        const error = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
-
-        // Handle errors from the auth provider
-        if (error) {
-          console.error('Auth callback error:', error, errorDescription);
-          setError(errorDescription || error);
-          setLoading(false);
-          return;
-        }
+        const email = searchParams.get('email');
 
         // Handle email confirmation
-        if (type === 'signup' && accessToken && refreshToken) {
+        if (type === 'signup' && email) {
           console.log('Processing email confirmation...');
           
-          // Set the session with the tokens
+          // Show success message
+          toast.success('Email confirmed successfully! You can now log in.');
+          
+          // Wait a moment before redirecting
+          setTimeout(() => {
+            navigate('/login', { replace: true });
+          }, 3000);
+          return;
+        }
+        
+        // Handle email confirmation with token exchange
+        if (type === 'email' && accessToken && refreshToken) {
+          console.log('Processing email confirmation with token exchange...');
+          
           const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
           });
-
+          
           if (sessionError) {
-            console.error('Session error:', sessionError);
+            console.error('Email confirmation session error:', sessionError);
             throw sessionError;
           }
-
+          
           if (data.user) {
-            console.log('Email confirmed successfully for user:', data.user.email);
+            console.log('Email confirmed and session established');
+            toast.success('Email confirmed successfully! Redirecting to dashboard...');
             
-            // Update the profile to mark email as confirmed
-            try {
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ 
-                  email_confirmed: true,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', data.user.id);
-
-              if (updateError) {
-                console.error('Error updating profile:', updateError);
-                // Don't fail the confirmation for this
-              }
-            } catch (profileError) {
-              console.error('Profile update error:', profileError);
-              // Don't fail the confirmation for this
-            }
-
-            toast.success('Email confirmed successfully! Welcome to iHomes!');
+            // Update user's email_confirmed status
+            await supabase
+              .from('profiles')
+              .update({ email_confirmed: true })
+              .eq('id', data.user.id);
             
-            // Redirect to dashboard after a short delay
+            // Redirect after a short delay
             setTimeout(() => {
               navigate('/dashboard', { replace: true });
             }, 2000);
@@ -85,12 +71,12 @@ export default function AuthCallback() {
             access_token: accessToken,
             refresh_token: refreshToken
           });
-
+          
           if (sessionError) {
             console.error('Password reset session error:', sessionError);
             throw sessionError;
           }
-
+          
           if (data.user) {
             console.log('Password reset session established');
             toast.success('Please set your new password');
@@ -112,10 +98,11 @@ export default function AuthCallback() {
             navigate('/login', { replace: true });
           }
         }
-      } catch (err: any) {
-        console.error('Auth callback error:', err);
-        setError(err.message || 'An error occurred during authentication');
-        toast.error('Authentication failed: ' + (err.message || 'Unknown error'));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'An error occurred during authentication';
+        console.error('Auth callback error:', message);
+        setError(message);
+        toast.error('Authentication failed: ' + message);
       } finally {
         setLoading(false);
       }
@@ -157,15 +144,15 @@ export default function AuthCallback() {
             <div className="space-y-3">
               <button
                 onClick={() => navigate('/login')}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
               >
                 Go to Login
               </button>
               <button
-                onClick={() => navigate('/signup')}
-                className="w-full px-4 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                onClick={() => navigate('/')}
+                className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
               >
-                Create New Account
+                Go to Home
               </button>
             </div>
           </div>
@@ -174,23 +161,5 @@ export default function AuthCallback() {
     );
   }
 
-  // Success state (while redirecting)
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full mx-auto text-center">
-        <div className="bg-white rounded-lg p-8 shadow-lg">
-          <div className="text-green-500 text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Success!
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Your account has been confirmed successfully.
-          </p>
-          <p className="text-sm text-gray-500">
-            Redirecting to your dashboard...
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }

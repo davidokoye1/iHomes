@@ -1,8 +1,9 @@
-// src/services/properties.ts
+// src/services/properties.ts - FIXED VERSION
 import { supabase } from "../lib/supabaseClient";
 import type {
   Property,
   PropertyImage,
+  PropertyImageInsert,
   PropertyWithImages,
   PropertyListing,
   PropertyFormData,
@@ -442,8 +443,8 @@ export class PropertiesService {
       }
 
       return properties || [];
-    } catch (error) {
-      console.error("Error in getPropertySuggestions:", error);
+    } catch (err) {
+      console.error("Error in getPropertySuggestions:", err);
       return [];
     }
   }
@@ -489,10 +490,10 @@ export class PropertiesService {
         list_type: listing_type || null,
         min_price: min_price || null,
         max_price: max_price || null,
-        min_beds: min_bedrooms || null, // Fixed: min_bedrooms -> min_beds
-        max_beds: max_bedrooms || null, // Fixed: max_bedrooms -> max_beds
-        min_baths: min_bathrooms || null, // Fixed: min_bathrooms -> min_baths
-        max_baths: max_bathrooms || null, // Fixed: max_bathrooms -> max_baths (this was missing)
+        min_beds: min_bedrooms || null,
+        max_beds: max_bedrooms || null,
+        min_baths: min_bathrooms || null,
+        max_baths: max_bathrooms || null,
         city_name: city || null,
         location_id: location_id || null,
         amenity_ids: amenity_ids && amenity_ids.length > 0 ? amenity_ids : null,
@@ -537,7 +538,7 @@ export class PropertiesService {
       }
 
       // Process the successful RPC response
-      const processedProperties = (data || []).map((p) => ({
+      const processedProperties = (data || []).map((p: any) => ({
         ...p,
         // Convert price from string to number if needed
         price: typeof p.price === "string" ? parseFloat(p.price) : p.price,
@@ -545,24 +546,29 @@ export class PropertiesService {
         bedrooms: p.bedrooms || 0,
         bathrooms: p.bathrooms || 0,
         square_feet: p.square_feet || 0,
-        // Remove total_count from individual properties
-        total_count: undefined,
+        // Remove total_count from individual properties (keep it for pagination)
       }));
 
       const total_count =
         processedProperties.length > 0 ? processedProperties[0].total_count : 0;
       const has_more = offset + processedProperties.length < total_count;
 
+      // Clean up properties by removing total_count from each property
+      const cleanProperties = processedProperties.map((p: any) => {
+        const { total_count: _, ...property } = p;
+        return property;
+      });
+
       console.log("Final result:", {
-        properties_count: processedProperties.length,
+        properties_count: cleanProperties.length,
         total_count,
         has_more,
-        first_property: processedProperties[0],
+        first_property: cleanProperties[0],
       });
       console.log("=== SEARCH DEBUG END ===");
 
       return {
-        properties: processedProperties,
+        properties: cleanProperties,
         total_count,
         has_more,
       };
@@ -625,7 +631,7 @@ export class PropertiesService {
 
       // Apply filters conditionally
       if (search_text) {
-        query = query.ilike("title", `%${search_text}%`);
+        query = query.or(`title.ilike.%${search_text}%,description.ilike.%${search_text}%,address.ilike.%${search_text}%,city.ilike.%${search_text}%`);
       }
 
       if (property_type) {
@@ -674,13 +680,12 @@ export class PropertiesService {
 
       // Handle amenities filter (this is complex with direct queries)
       if (amenity_ids && amenity_ids.length > 0) {
-        // This would require a more complex subquery or join
         console.log("Amenity filtering not fully supported in fallback mode");
       }
 
       // Apply sorting
       const ascending = sort_order === "ASC";
-      query = query.order(sort_by as any, { ascending });
+      query = query.order(sort_by, { ascending });
 
       // Apply pagination
       query = query.range(offset, offset + limit - 1);
@@ -699,7 +704,7 @@ export class PropertiesService {
 
       // Apply the same filters for counting
       if (search_text) {
-        countQuery = countQuery.ilike("title", `%${search_text}%`);
+        countQuery = countQuery.or(`title.ilike.%${search_text}%,description.ilike.%${search_text}%,address.ilike.%${search_text}%,city.ilike.%${search_text}%`);
       }
       if (property_type) {
         countQuery = countQuery.eq("property_type", property_type);
@@ -752,306 +757,252 @@ export class PropertiesService {
    * Create a new property listing
    * Handles property data, image uploads, and amenity associations
    */
- // FIXED createProperty function in PropertiesService
-static async createProperty(
-  data: PropertyFormData & { images: File[]; amenities: string[] },
-  userId: string
-): Promise<Property | null> {
-  try {
-    const { images, amenities, ...propertyData } = data;
-    
-    // Validate required fields before proceeding
-    if (!propertyData.title || !propertyData.description || !propertyData.price) {
-      throw new Error("Missing required fields: title, description, or price");
-    }
-    
-    // POTENTIAL FIX: Force schema refresh for Supabase
+  static async createProperty(
+    data: PropertyFormData & { images: File[]; amenities: string[] },
+    userId: string
+  ): Promise<Property | null> {
     try {
-      await supabase.from("properties").select("id").limit(1);
-    } catch (schemaError) {
-      console.warn("Schema pre-check failed:", schemaError);
-    }
-    
-    // Add missing required fields from your DB schema
-    // Match the EXACT schema structure
-    const propertyDataWithDefaults = {
-      // Required fields (NOT NULL)
-      title: String(propertyData.title || '').trim(),
-      price: Number(propertyData.price),
-      property_type: propertyData.property_type,
-      listing_type: propertyData.listing_type,
-      address: String(propertyData.address || '').trim(),
-      city: String(propertyData.city || '').trim(),
-      agent_id: userId, // This will be added in the insert
+      const { images, amenities, ...propertyData } = data;
       
-      // Optional fields that match your schema
-      description: propertyData.description ? String(propertyData.description).trim() : null,
-      currency_code: propertyData.currency_code || 'GMD',
-      landmark: propertyData.landmark ? String(propertyData.landmark).trim() : null,
-      
-      // Numeric fields (integers in your schema)
-      bedrooms: propertyData.bedrooms ? Number(propertyData.bedrooms) : null,
-      bathrooms: propertyData.bathrooms ? Number(propertyData.bathrooms) : null,
-      area_sqft: propertyData.area_sqft ? Number(propertyData.area_sqft) : null,
-      square_feet: propertyData.square_feet ? Number(propertyData.square_feet) : null,
-      lot_size: propertyData.lot_size ? Number(propertyData.lot_size) : null,
-      year_built: propertyData.year_built ? Number(propertyData.year_built) : null,
-      floors: propertyData.floors ? Number(propertyData.floors) : null,
-      parking_spaces: propertyData.parking_spaces ? Number(propertyData.parking_spaces) : null,
-      
-      // Geographic data
-      latitude: propertyData.latitude ? Number(propertyData.latitude) : null,
-      longitude: propertyData.longitude ? Number(propertyData.longitude) : null,
-      location_id: propertyData.location_id || null,
-      
-      // Boolean fields
-      is_furnished: propertyData.is_furnished ? Boolean(propertyData.is_furnished) : null,
-      featured: false,
-      
-      // SEO fields
-      meta_title: propertyData.meta_title ? String(propertyData.meta_title).trim() : null,
-      meta_description: propertyData.meta_description ? String(propertyData.meta_description).trim() : null,
-      slug: propertyData.slug ? String(propertyData.slug).trim() : null,
-    };
-
-    // Remove undefined values to avoid schema issues
-    Object.keys(propertyDataWithDefaults).forEach(key => {
-      if (propertyDataWithDefaults[key] === undefined) {
-        delete propertyDataWithDefaults[key];
+      // Validate required fields before proceeding
+      if (!propertyData.title || !propertyData.price) {
+        throw new Error("Missing required fields: title or price");
       }
-    });
+      
+      // Match the EXACT schema structure from your database
+      const propertyDataWithDefaults = {
+        // Required fields (NOT NULL)
+        title: String(propertyData.title || '').trim(),
+        price: Number(propertyData.price),
+        property_type: propertyData.property_type,
+        listing_type: propertyData.listing_type,
+        address: String(propertyData.address || '').trim(),
+        city: String(propertyData.city || '').trim(),
+        agent_id: userId,
+        
+        // Optional fields that match your schema
+        description: propertyData.description ? String(propertyData.description).trim() : null,
+        
+        // Numeric fields (integers in your schema)
+        bedrooms: propertyData.bedrooms ? Number(propertyData.bedrooms) : null,
+        bathrooms: propertyData.bathrooms ? Number(propertyData.bathrooms) : null,
+        square_feet: propertyData.square_feet ? Number(propertyData.square_feet) : null,
+        lot_size: propertyData.lot_size ? Number(propertyData.lot_size) : null,
+        year_built: propertyData.year_built ? Number(propertyData.year_built) : null,
+        floors: propertyData.floors ? Number(propertyData.floors) : null,
+        parking_spaces: propertyData.parking_spaces ? Number(propertyData.parking_spaces) : 0,
+        
+        // Geographic data
+        latitude: propertyData.latitude ? Number(propertyData.latitude) : null,
+        longitude: propertyData.longitude ? Number(propertyData.longitude) : null,
+        location_id: propertyData.location_id || null,
+        
+        // Boolean fields
+        is_furnished: propertyData.is_furnished ? Boolean(propertyData.is_furnished) : false,
+        featured: false,
+        
+        // System fields
+        status: "active" as const,
+        views_count: 0,
+        inquiry_count: 0,
+        published_at: new Date().toISOString(),
+      };
 
-    console.log("Creating property with data:", {
-      title: propertyDataWithDefaults.title,
-      price: propertyDataWithDefaults.price,
-      property_type: propertyDataWithDefaults.property_type,
-      listing_type: propertyDataWithDefaults.listing_type,
-      imageCount: images?.length || 0,
-      amenityCount: amenities?.length || 0,
-      allFields: Object.keys(propertyDataWithDefaults)
-    });
-    
-    // Insert the property with explicit field mapping
-    const insertData = {
-      // Required fields
-      title: propertyDataWithDefaults.title,
-      price: propertyDataWithDefaults.price,
-      property_type: propertyDataWithDefaults.property_type,
-      listing_type: propertyDataWithDefaults.listing_type,
-      address: propertyDataWithDefaults.address,
-      city: propertyDataWithDefaults.city,
-      agent_id: userId,
-      
-      // System fields
-      status: "active",
-      views_count: 0,
-      inquiry_count: 0,
-      featured: false,
-      published_at: new Date().toISOString(),
-      
-      // Optional fields (only include if they have values)
-      ...(propertyDataWithDefaults.description && { description: propertyDataWithDefaults.description }),
-      ...(propertyDataWithDefaults.currency_code && { currency_code: propertyDataWithDefaults.currency_code }),
-      ...(propertyDataWithDefaults.landmark && { landmark: propertyDataWithDefaults.landmark }),
-      ...(propertyDataWithDefaults.bedrooms !== null && { bedrooms: propertyDataWithDefaults.bedrooms }),
-      ...(propertyDataWithDefaults.bathrooms !== null && { bathrooms: propertyDataWithDefaults.bathrooms }),
-      ...(propertyDataWithDefaults.area_sqft !== null && { area_sqft: propertyDataWithDefaults.area_sqft }),
-      ...(propertyDataWithDefaults.square_feet !== null && { square_feet: propertyDataWithDefaults.square_feet }),
-      ...(propertyDataWithDefaults.lot_size !== null && { lot_size: propertyDataWithDefaults.lot_size }),
-      ...(propertyDataWithDefaults.year_built !== null && { year_built: propertyDataWithDefaults.year_built }),
-      ...(propertyDataWithDefaults.floors !== null && { floors: propertyDataWithDefaults.floors }),
-      ...(propertyDataWithDefaults.parking_spaces !== null && { parking_spaces: propertyDataWithDefaults.parking_spaces }),
-      ...(propertyDataWithDefaults.latitude !== null && { latitude: propertyDataWithDefaults.latitude }),
-      ...(propertyDataWithDefaults.longitude !== null && { longitude: propertyDataWithDefaults.longitude }),
-      ...(propertyDataWithDefaults.location_id && { location_id: propertyDataWithDefaults.location_id }),
-      ...(propertyDataWithDefaults.is_furnished !== null && { is_furnished: propertyDataWithDefaults.is_furnished }),
-      ...(propertyDataWithDefaults.meta_title && { meta_title: propertyDataWithDefaults.meta_title }),
-      ...(propertyDataWithDefaults.meta_description && { meta_description: propertyDataWithDefaults.meta_description }),
-      ...(propertyDataWithDefaults.slug && { slug: propertyDataWithDefaults.slug }),
-    };
-    
-    console.log("Final insert data:", insertData);
-    
-    // Insert the property with proper error handling
-    const { data: newProperty, error: propertyError } = await supabase
-      .from("properties")
-      .insert(insertData)
-      .select()
-      .single();
-    
-    if (propertyError) {
-      console.error("Property creation error details:", {
-        code: propertyError.code,
-        message: propertyError.message,
-        details: propertyError.details,
-        hint: propertyError.hint,
-        propertyData: propertyDataWithDefaults
+      // Remove undefined values to avoid schema issues
+      Object.keys(propertyDataWithDefaults).forEach(key => {
+        if (propertyDataWithDefaults[key as keyof typeof propertyDataWithDefaults] === undefined) {
+          delete propertyDataWithDefaults[key as keyof typeof propertyDataWithDefaults];
+        }
+      });
+
+      console.log("Creating property with data:", {
+        title: propertyDataWithDefaults.title,
+        price: propertyDataWithDefaults.price,
+        property_type: propertyDataWithDefaults.property_type,
+        listing_type: propertyDataWithDefaults.listing_type,
+        imageCount: images?.length || 0,
+        amenityCount: amenities?.length || 0,
       });
       
-      // Handle specific database errors
-      if (propertyError.code === '23505') {
-        throw new Error("A property with this information already exists");
-      } else if (propertyError.code === '23502') {
-        throw new Error(`Missing required field: ${propertyError.message}`);
-      } else if (propertyError.code === '42703') {
-        throw new Error("Database schema error. Please contact support.");
-      }
+      // Insert the property
+      const { data: newProperty, error: propertyError } = await supabase
+        .from("properties")
+        .insert(propertyDataWithDefaults)
+        .select()
+        .single();
       
-      throw new Error(`Failed to create property: ${propertyError.message}`);
-    }
-    
-    if (!newProperty) {
-      throw new Error("Property created but no data returned");
-    }
-    
-    console.log("Property created successfully:", newProperty.id);
-    
-    // Handle image uploads if provided
-    if (images && images.length > 0) {
-      console.log(`Uploading ${images.length} images...`);
-      
-      try {
-        const imageInserts = await Promise.allSettled(
-          images.map(async (file, index) => {
-            try {
-              // Validate file
-              if (!file || file.size === 0) {
-                throw new Error(`Invalid file at index ${index}`);
-              }
-              
-              if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                throw new Error(`File ${file.name} is too large (max 5MB)`);
-              }
-              
-              const fileExt = file.name.split(".").pop()?.toLowerCase();
-              if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
-                throw new Error(`Invalid file type for ${file.name}. Use JPG, PNG, or WebP`);
-              }
-              
-              const fileName = `${newProperty.id}/${Date.now()}_${index}.${fileExt}`;
-              
-              // Upload file to storage
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from("property-images")
-                .upload(fileName, file, {
-                  cacheControl: '3600',
-                  upsert: false
-                });
-              
-              if (uploadError) {
-                console.error("Image upload error:", uploadError);
-                throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-              }
-              
-              // Get public URL
-              const { data: publicUrlData } = supabase.storage
-                .from("property-images")
-                .getPublicUrl(fileName);
-              
-              if (!publicUrlData?.publicUrl) {
-                throw new Error(`Failed to get public URL for ${fileName}`);
-              }
-              
-              return {
-                property_id: newProperty.id,
-                image_url: publicUrlData.publicUrl,
-                is_primary: index === 0,
-                display_order: index,
-              };
-            } catch (error) {
-              console.error(`Error processing image ${index}:`, error);
-              throw error;
-            }
-          })
-        );
-        
-        // Filter successful uploads and log failures
-        const validImages: PropertyImage[] = [];
-        const failedUploads: string[] = [];
-        
-        imageInserts.forEach((result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
-            validImages.push(result.value);
-          } else {
-            failedUploads.push(`Image ${index + 1}: ${result.reason}`);
-          }
+      if (propertyError) {
+        console.error("Property creation error details:", {
+          code: propertyError.code,
+          message: propertyError.message,
+          details: propertyError.details,
+          hint: propertyError.hint,
         });
         
-        if (failedUploads.length > 0) {
-          console.warn("Some images failed to upload:", failedUploads);
+        // Handle specific database errors
+        if (propertyError.code === '23505') {
+          throw new Error("A property with this information already exists");
+        } else if (propertyError.code === '23502') {
+          throw new Error(`Missing required field: ${propertyError.message}`);
+        } else if (propertyError.code === '42703') {
+          throw new Error("Database schema error. Please contact support.");
         }
         
-        // Insert image metadata
-        if (validImages.length > 0) {
-          const { error: imagesError } = await supabase
-            .from("property_images")
-            .insert(validImages);
+        throw new Error(`Failed to create property: ${propertyError.message}`);
+      }
+      
+      if (!newProperty) {
+        throw new Error("Property created but no data returned");
+      }
+      
+      console.log("Property created successfully:", newProperty.id);
+      
+      // Handle image uploads if provided
+      if (images && images.length > 0) {
+        console.log(`Uploading ${images.length} images...`);
+        
+        try {
+          const imageInserts = await Promise.allSettled(
+            images.map(async (file, index) => {
+              try {
+                // Validate file
+                if (!file || file.size === 0) {
+                  throw new Error(`Invalid file at index ${index}`);
+                }
+                
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                  throw new Error(`File ${file.name} is too large (max 5MB)`);
+                }
+                
+                const fileExt = file.name.split(".").pop()?.toLowerCase();
+                if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+                  throw new Error(`Invalid file type for ${file.name}. Use JPG, PNG, or WebP`);
+                }
+                
+                const fileName = `${newProperty.id}/${Date.now()}_${index}.${fileExt}`;
+                
+                // Upload file to storage
+                const { error: uploadError } = await supabase.storage
+                  .from("property-images")
+                  .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                  });
+                
+                if (uploadError) {
+                  console.error("Image upload error:", uploadError);
+                  throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+                }
+                
+                // Get public URL
+                const { data: publicUrlData } = supabase.storage
+                  .from("property-images")
+                  .getPublicUrl(fileName);
+                
+                if (!publicUrlData?.publicUrl) {
+                  throw new Error(`Failed to get public URL for ${fileName}`);
+                }
+                
+                return {
+                  property_id: newProperty.id,
+                  image_url: publicUrlData.publicUrl,
+                  is_primary: index === 0,
+                  display_order: index,
+                };
+              } catch (error) {
+                console.error(`Error processing image ${index}:`, error);
+                throw error;
+              }
+            })
+          );
           
-          if (imagesError) {
-            console.error("Error saving image metadata:", imagesError);
+          // Filter successful uploads and log failures
+          const validImages: PropertyImageInsert[] = [];
+          const failedUploads: string[] = [];
+          
+          imageInserts.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value) {
+              validImages.push(result.value);
+            } else if (result.status === 'rejected') {
+              failedUploads.push(`Image ${index + 1}: ${result.reason}`);
+            }
+          });
+          
+          if (failedUploads.length > 0) {
+            console.warn("Some images failed to upload:", failedUploads);
+          }
+          
+          // Insert image metadata
+          if (validImages.length > 0) {
+            const { error: imagesError } = await supabase
+              .from("property_images")
+              .insert(validImages);
+            
+            if (imagesError) {
+              console.error("Error saving image metadata:", imagesError);
+              // Continue execution but log the error
+            } else {
+              console.log(`${validImages.length} images uploaded successfully`);
+            }
+          } else if (images.length > 0) {
+            console.warn("No images were successfully uploaded");
+          }
+          
+        } catch (imageError) {
+          console.error("Image processing error:", imageError);
+          // Don't fail the whole operation for image errors, but log them
+        }
+      }
+      
+      // Handle amenities if provided
+      if (amenities && amenities.length > 0) {
+        console.log(`Adding ${amenities.length} amenities...`);
+        
+        try {
+          const amenityInserts = amenities.map(amenityId => ({
+            property_id: newProperty.id,
+            amenity_id: amenityId
+          }));
+          
+          const { error: amenitiesError } = await supabase
+            .from("property_amenities")
+            .insert(amenityInserts);
+          
+          if (amenitiesError) {
+            console.error("Error saving amenities:", amenitiesError);
             // Continue execution but log the error
           } else {
-            console.log(`${validImages.length} images uploaded successfully`);
+            console.log("Amenities added successfully");
           }
-        } else if (images.length > 0) {
-          console.warn("No images were successfully uploaded");
+        } catch (amenityError) {
+          console.error("Amenity processing error:", amenityError);
+          // Don't fail the whole operation for amenity errors
         }
-        
-      } catch (imageError) {
-        console.error("Image processing error:", imageError);
-        // Don't fail the whole operation for image errors, but log them
       }
-    }
-    
-    // Handle amenities if provided
-    if (amenities && amenities.length > 0) {
-      console.log(`Adding ${amenities.length} amenities...`);
       
+      // Log the activity (non-blocking)
       try {
-        const amenityInserts = amenities.map(amenityId => ({
-          property_id: newProperty.id,
-          amenity_id: amenityId
-        }));
-        
-        const { error: amenitiesError } = await supabase
-          .from("property_amenities")
-          .insert(amenityInserts);
-        
-        if (amenitiesError) {
-          console.error("Error saving amenities:", amenitiesError);
-          // Continue execution but log the error
-        } else {
-          console.log("Amenities added successfully");
-        }
-      } catch (amenityError) {
-        console.error("Amenity processing error:", amenityError);
-        // Don't fail the whole operation for amenity errors
+        await supabase
+          .from("activity_logs")
+          .insert({
+            user_id: userId,
+            action: "property_created",
+            entity_type: "property",
+            entity_id: newProperty.id,
+            details: { title: newProperty.title }
+          });
+      } catch (error) {
+        console.error("Error logging activity:", error);
+        // Don't fail property creation for this
       }
-    }
-    
-    // Log the activity (non-blocking)
-    try {
-      await supabase
-        .from("activity_logs")
-        .insert({
-          user_id: userId,
-          action: "property_created",
-          entity_type: "property",
-          entity_id: newProperty.id,
-          details: { title: newProperty.title }
-        });
+      
+      console.log("Property creation completed successfully");
+      return newProperty;
     } catch (error) {
-      console.error("Error logging activity:", error);
-      // Don't fail property creation for this
+      console.error("Error in createProperty:", error);
+      throw error; // Re-throw to be handled by the calling component
     }
-    
-    console.log("Property creation completed successfully");
-    return newProperty;
-  } catch (error) {
-    console.error("Error in createProperty:", error);
-    throw error; // Re-throw to be handled by the calling component
   }
-}
 
   /**
    * Record a property view for analytics
@@ -1343,6 +1294,83 @@ static async createProperty(
     } catch (error) {
       console.error("Error in updatePropertyStatus:", error);
       return false;
+    }
+  }
+
+  /**
+   * Update a property with new data
+   */
+  static async updateProperty(
+    propertyId: string,
+    data: Partial<PropertyFormData>,
+    userId: string
+  ): Promise<Property | null> {
+    try {
+      // Prepare the update data
+      const updateData: Record<string, any> = {};
+      
+      if (data.title) updateData.title = String(data.title).trim();
+      if (data.description !== undefined) updateData.description = data.description ? String(data.description).trim() : null;
+      if (data.price) updateData.price = Number(data.price);
+      if (data.property_type) updateData.property_type = data.property_type;
+      if (data.listing_type) updateData.listing_type = data.listing_type;
+      if (data.address) updateData.address = String(data.address).trim();
+      if (data.city) updateData.city = String(data.city).trim();
+      if (data.bedrooms !== undefined) updateData.bedrooms = data.bedrooms ? Number(data.bedrooms) : null;
+      if (data.bathrooms !== undefined) updateData.bathrooms = data.bathrooms ? Number(data.bathrooms) : null;
+      if (data.square_feet !== undefined) updateData.square_feet = data.square_feet ? Number(data.square_feet) : null;
+      if (data.lot_size !== undefined) updateData.lot_size = data.lot_size ? Number(data.lot_size) : null;
+      if (data.year_built !== undefined) updateData.year_built = data.year_built ? Number(data.year_built) : null;
+      if (data.floors !== undefined) updateData.floors = data.floors ? Number(data.floors) : null;
+      if (data.parking_spaces !== undefined) updateData.parking_spaces = data.parking_spaces ? Number(data.parking_spaces) : 0;
+      if (data.latitude !== undefined) updateData.latitude = data.latitude ? Number(data.latitude) : null;
+      if (data.longitude !== undefined) updateData.longitude = data.longitude ? Number(data.longitude) : null;
+      if (data.location_id !== undefined) updateData.location_id = data.location_id || null;
+      if (data.is_furnished !== undefined) updateData.is_furnished = Boolean(data.is_furnished);
+      
+      // Add updated timestamp
+      updateData.updated_at = new Date().toISOString();
+
+      const { data: updatedProperty, error } = await supabase
+        .from("properties")
+        .update(updateData)
+        .eq("id", propertyId)
+        .eq("agent_id", userId) // Ensure user can only update their own properties
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating property:", error);
+        throw new Error(`Failed to update property: ${error.message}`);
+      }
+
+      return updatedProperty;
+    } catch (error) {
+      console.error("Error in updateProperty:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get property by ID with ownership check
+   */
+  static async getPropertyByIdForAgent(
+    propertyId: string,
+    agentId: string
+  ): Promise<PropertyWithImages | null> {
+    try {
+      const property = await this.getPropertyById(propertyId);
+      
+      // Check if the agent owns this property
+      if (property && property.agent_id !== agentId) {
+        console.error("Agent does not own this property");
+        return null;
+      }
+      
+      return property;
+    } catch (error) {
+      console.error("Error in getPropertyByIdForAgent:", error);
+      return null;
     }
   }
 }

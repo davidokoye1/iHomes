@@ -1,6 +1,6 @@
 // src/components/RoleSelect.tsx
 import Select from "react-select";
-
+import type { StylesConfig } from "react-select"
 interface Option {
   value: string;
   label: string;
@@ -16,8 +16,8 @@ const roleOptions: Option[] = [
   { value: "agent", label: "Agent" },
 ];
 
-const customStyles = {
-  control: (provided: any) => ({
+const customStyles: StylesConfig<Option, false> = {
+  control: (provided) => ({
     ...provided,
     width: "100%",
     height: "64px",
@@ -31,26 +31,26 @@ const customStyles = {
     outline: "none",
     "&:hover": { border: "2.6px solid #7fd783" },
   }),
-  menu: (provided: any) => ({
+  menu: (provided) => ({
     ...provided,
     padding: "8px",
     borderRadius: "16px",
     marginTop: "4px",
     border: "2.6px solid #7fd783",
   }),
-  option: (provided: any, state: any) => ({
+  option: (provided, state) => ({
     ...provided,
     borderRadius: "16px",
     backgroundColor: state.isFocused ? "#7fd783" : "#ffffff",
     color: state.isFocused ? "#ffffff" : "#333333",
     transition: "background-color 0.3s ease, color 0.3s ease",
   }),
-  singleValue: (provided: any) => ({
+  singleValue: (provided) => ({
     ...provided,
     color: "#333333",
   }),
   indicatorSeparator: () => ({ display: "none" }),
-  dropdownIndicator: (provided: any) => ({
+  dropdownIndicator: (provided) => ({
     ...provided,
     color: "#7fd783",
   }),
@@ -71,3 +71,4 @@ const RoleSelect = ({ value, onChange }: RoleSelectProps) => {
 };
 
 export default RoleSelect;
+
