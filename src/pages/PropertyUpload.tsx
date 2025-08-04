@@ -22,7 +22,7 @@ import {
 import Navbar from '../components/Navbar';
 import Button from '../components/Button';
 import { PropertiesService } from '../services/properties';
-import type { PropertyFormData, Amenity, Location, PropertyType } from '../types/database';
+import type { PropertyFormData, Amenity, PropertyType } from '../types/database';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 

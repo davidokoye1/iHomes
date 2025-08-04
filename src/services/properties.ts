@@ -2,7 +2,7 @@
 import { supabase } from "../lib/supabaseClient";
 import type {
   Property,
-  PropertyImage,
+  // PropertyImage,
   PropertyImageInsert,
   PropertyWithImages,
   PropertyListing,

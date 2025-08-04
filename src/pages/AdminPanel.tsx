@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
-  MapPin, 
+  // MapPin, 
   Home, 
-  Settings, 
-  Plus, 
+  // Settings, 
+  // Plus, 
   Trash2, 
-  Edit, 
+  // Edit, 
   X,
   Search,
-  Building,
+  // Building,
   Star,
   Eye,
   CheckCircle,
@@ -18,8 +18,8 @@ import {
   AlertCircle,
   MessageSquare,
   TrendingUp,
-  Calendar,
-  DollarSign,
+  // Calendar,
+  // DollarSign,
   Activity
 } from 'lucide-react';
 import Navbar from '../components/Navbar';

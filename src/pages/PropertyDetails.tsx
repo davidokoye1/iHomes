@@ -17,7 +17,7 @@ import Button from "../components/Button";
 import ListingCard from "../components/ListingCard";
 import { PropertiesService } from "../services/properties";
 import type { PropertyWithImages, PropertyListing } from "../types/database";
-import type {Profile} from "../types/database"
+// import type {Profile} from "../types/database"
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

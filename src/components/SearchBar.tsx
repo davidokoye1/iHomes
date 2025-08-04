@@ -18,13 +18,13 @@ interface Location {
   is_popular: boolean;
 }
 
-interface Amenity {
-  id: string;
-  name: string;
-  icon_name: string;
-  category: string;
-  is_popular: boolean;
-}
+// interface Amenity {
+//   id: string;
+//   name: string;
+//   icon_name: string;
+//   category: string;
+//   is_popular: boolean;
+// }
 
 // Constants for price ranges and bedrooms (can be moved to database later)
 const PRICE_RANGES = [
