@@ -103,6 +103,7 @@ export interface PropertyListing {
   price: number;
   property_type: PropertyType;
   listing_type: ListingType;
+  status: PropertyStatus; // Added status property
   address: string;
   city: string;
   bedrooms?: number;

@@ -39,10 +39,9 @@ export const insertMockData = async (agentId: string) => {
         year_built: 1980 + Math.floor(Math.random() * 40),
         parking_spaces: Math.floor(Math.random() * 4),
         is_furnished: Math.random() > 0.5,
-        has_pool: Math.random() > 0.7,
-        has_garden: Math.random() > 0.6,
         agent_id: agentId,
         featured: Math.random() > 0.7,
+        inquiry_count: 0,
         views_count: Math.floor(Math.random() * 100),
         latitude: 13.444 + Math.random() * 0.5,
         longitude: -16.574 + Math.random() * 0.5

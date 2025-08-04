@@ -183,7 +183,8 @@ export class PropertiesService {
           agency_name,
           featured,
           views_count,
-          created_at
+          created_at,
+          status
         `
         )
         .limit(limit);
@@ -210,6 +211,7 @@ export class PropertiesService {
               bedrooms,
               bathrooms,
               square_feet,
+              status,
               featured,
               views_count,
               created_at
@@ -259,7 +261,8 @@ export class PropertiesService {
           agency_name,
           featured,
           views_count,
-          created_at
+          created_at,
+          status
         `
         )
         .order("created_at", { ascending: false })
@@ -287,6 +290,7 @@ export class PropertiesService {
               bedrooms,
               bathrooms,
               square_feet,
+              status,
               featured,
               views_count,
               created_at
@@ -351,7 +355,8 @@ export class PropertiesService {
           agency_name,
           featured,
           views_count,
-          created_at
+          created_at,
+          status
         `
         )
         .neq("id", propertyId)
@@ -382,7 +387,8 @@ export class PropertiesService {
             agency_name,
             featured,
             views_count,
-            created_at
+            created_at,
+            status
           `
           )
           .neq("id", propertyId)
@@ -421,7 +427,8 @@ export class PropertiesService {
             agency_name,
             featured,
             views_count,
-            created_at
+            created_at,
+            status
           `
           )
           .neq("id", propertyId)
@@ -1056,7 +1063,8 @@ export class PropertiesService {
           agency_name,
           featured,
           views_count,
-          created_at
+          created_at,
+          status
         `
         )
         .eq("agent_id", agentId)
@@ -1192,7 +1200,8 @@ export class PropertiesService {
           agency_name,
           featured,
           views_count,
-          created_at
+          created_at,
+          status
         `
         )
         .match(agentCondition)

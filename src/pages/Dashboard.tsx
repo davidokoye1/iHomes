@@ -7,7 +7,7 @@ import {
   Eye,
   MessageCircle,
   TrendingUp,
-  Edit,
+  // Edit,
   Trash2,
   Users,
   BarChart3,
@@ -34,7 +34,7 @@ import {
   Copy,
   RefreshCw,
   ArrowUpRight,
-  ArrowDownRight,
+  // ArrowDownRight,
   Target,
   Award,
   Zap,
@@ -51,7 +51,7 @@ import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabaseClient";
 import { PropertiesService } from "../services/properties";
-import type { Profile, PropertyListing, DashboardStats, Inquiry } from "../types/database";
+import type { Profile, PropertyListing, DashboardStats, Inquiry, PropertyStatus } from "../types/database";
 import { toast } from "sonner";
 
 type ViewMode = 'grid' | 'list';
@@ -107,8 +107,8 @@ export default function Dashboard() {
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aVal: any = a[sortField];
-      let bVal: any = b[sortField];
+      let aVal: any = a[sortField as keyof PropertyListing];
+      let bVal: any = b[sortField as keyof PropertyListing];
 
       if (sortField === 'price' || sortField === 'views_count') {
         aVal = Number(aVal) || 0;
@@ -141,7 +141,7 @@ export default function Dashboard() {
     const avgPrice = Math.round(totalValue / userProperties.length);
 
     const statusCounts = userProperties.reduce((acc, p) => {
-      acc[p.status] = (acc[p.status] || 0) + 1;
+      acc[p.status as PropertyStatus] = (acc[p.status as PropertyStatus] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -159,7 +159,7 @@ export default function Dashboard() {
       avgPrice,
       statusCounts,
       newThisMonth,
-      conversionRate: recentInquiries.length > 0 ? Math.round((recentInquiries.filter(i => i.status === 'resolved').length / recentInquiries.length) * 100) : 0
+      conversionRate: recentInquiries.length > 0 ? Math.round((recentInquiries.filter(i => i.status === 'closed').length / recentInquiries.length) * 100) : 0
     };
   }, [userProperties, recentInquiries]);
 
@@ -353,7 +353,7 @@ export default function Dashboard() {
         setUserProperties(prev =>
             prev.map(property =>
                 property.id === propertyId
-                    ? { ...property, status: newStatus }
+                    ? { ...property, status: newStatus as PropertyStatus }
                     : property
             )
         );
@@ -428,7 +428,7 @@ export default function Dashboard() {
     const dataToExport = filteredProperties.map(p => ({
       title: p.title,
       price: p.price,
-      status: p.status,
+      status: p.status as PropertyStatus,
       type: p.property_type,
       listing_type: p.listing_type,
       city: p.city,
@@ -840,7 +840,7 @@ export default function Dashboard() {
                                     </div>
                                     <p className="text-sm text-gray-800 mb-2 line-clamp-2">{inquiry.message}</p>
                                     <div className="flex items-center justify-between text-xs text-gray-500">
-                                      <span>{inquiry.property?.title}</span>
+                                      <span>{inquiry.property_id}</span>
                                       <span>{new Date(inquiry.created_at).toLocaleDateString()}</span>
                                     </div>
                                   </div>
@@ -900,7 +900,7 @@ export default function Dashboard() {
                                     <Eye className="h-3 w-3" />
                                     {property.views_count} views
                                   </span>
-                                              <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(property.status)}`}>
+                                              <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(property.status as PropertyStatus)}`}>
                                     {property.status}
                                   </span>
                                             </div>
@@ -1112,8 +1112,8 @@ export default function Dashboard() {
                               </span>
                                     )}
                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${getStatusColor(property.status)}`}>
-                              {getStatusIcon(property.status)}
-                                      {property.status}
+                              {getStatusIcon(property.status as PropertyStatus)}
+                              {property.status as PropertyStatus}
                             </span>
                                   </div>
 
@@ -1162,23 +1162,23 @@ export default function Dashboard() {
                                     </div>
 
                                     <div className="flex items-center gap-3 text-sm text-gray-600">
-                                      {property.bedrooms > 0 && (
-                                          <div className="flex items-center gap-1">
-                                            <Bed className="h-4 w-4" />
-                                            <span>{property.bedrooms}</span>
-                                          </div>
+                                      {(property.bedrooms || 0) > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          <Bed className="h-4 w-4" />
+                                          <span>{property.bedrooms}</span>
+                                        </div>
                                       )}
-                                      {property.bathrooms > 0 && (
-                                          <div className="flex items-center gap-1">
-                                            <Bath className="h-4 w-4" />
-                                            <span>{property.bathrooms}</span>
-                                          </div>
+                                      {(property.bathrooms || 0) > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          <Bath className="h-4 w-4" />
+                                          <span>{property.bathrooms}</span>
+                                        </div>
                                       )}
-                                      {property.square_feet > 0 && (
-                                          <div className="flex items-center gap-1">
-                                            <Square className="h-4 w-4" />
-                                            <span>{property.square_feet?.toLocaleString()}</span>
-                                          </div>
+                                      {(property.square_feet || 0) > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          <Square className="h-4 w-4" />
+                                          <span>{property.square_feet?.toLocaleString()}</span>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -1227,7 +1227,6 @@ export default function Dashboard() {
                                             variant="white"
                                             className="px-3"
                                             onClick={() => handleToggleFeatured(property.id, property.featured)}
-                                            title={property.featured ? "Remove from featured" : "Make featured"}
                                         >
                                           <Star className={`h-4 w-4 ${property.featured ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
                                         </Button>
@@ -1237,7 +1236,6 @@ export default function Dashboard() {
                                         variant="white"
                                         className="px-3 text-red-600 hover:bg-red-50"
                                         onClick={() => handleDeleteProperty(property.id)}
-                                        title="Delete property"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -1339,7 +1337,7 @@ export default function Dashboard() {
 
                                 <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
                                   <div className="flex items-center gap-4">
-                                    <span className="font-medium">Property: {inquiry.property?.title}</span>
+                                    <span className="font-medium">Property ID: {inquiry.property_id}</span>
                                     <Link to={`/property/${inquiry.property_id}`} className="text-green-600 hover:text-green-700 flex items-center gap-1">
                                       <ExternalLink className="h-3 w-3" />
                                       View Property
@@ -1550,8 +1548,8 @@ export default function Dashboard() {
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
-                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status)}`}>
-                                {property.status}
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(property.status as PropertyStatus)}`}>
+                                {property.status as PropertyStatus}
                               </span>
                                     </td>
                                     <td className="px-4 py-3 font-medium">
