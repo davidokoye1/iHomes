@@ -54,14 +54,13 @@ import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import ListingCard from "../components/ListingCard";
 import { PropertiesService } from "../services/properties";
-import type { PropertyWithImages, PropertyListing, Amenity } from "../types/database";
+import type { PropertyWithImages, PropertyListing } from "../types/database";
 
 const PropertyDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [property, setProperty] = useState<PropertyWithImages | null>(null);
   const [suggestions, setSuggestions] = useState<PropertyListing[]>([]);
-  const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -71,7 +70,6 @@ const PropertyDetails = () => {
   useEffect(() => {
     if (id) {
       fetchProperty(id);
-      fetchAmenities();
     }
   }, [id]);
 
@@ -100,14 +98,6 @@ const PropertyDetails = () => {
     }
   };
 
-  const fetchAmenities = async () => {
-    try {
-      const amenitiesData = await PropertiesService.getAmenities();
-      setAmenities(amenitiesData);
-    } catch (error) {
-      console.error("Error fetching amenities:", error);
-    }
-  };
 
   // Share function
   const handleShare = async () => {
