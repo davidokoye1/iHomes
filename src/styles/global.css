@@ -1,59 +1,48 @@
 /* === Buttons === */
 .colored-button {
-  padding: 22px 28px;
+  padding: 16px 20px;
   border-radius: 360px;
   background: linear-gradient(to bottom, #bdf99a, #5dd27c);
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
 }
 
 .search-button {
-  padding: 24px 48px;
+  padding: 18px 36px;
   border-radius: 360px;
   background: linear-gradient(to bottom, #bdf99a, #5dd27c);
 }
-/* Outer container with rounded corners */
-.rounded-outer {
-  border-radius: 32px; /* Adjust this value to control the roundness */
-  overflow: hidden; /* Prevents inner images from overflowing the rounded corners */
-  background-color: #f5f5f5; /* Optional: Adds a light background for contrast */
-}
 
-/* Inner images with sharp corners */
-.sharp-inner {
-  border-radius: 0 !important; /* Ensures no rounding on inner images */
-}
 .white-button {
-  padding: 18px 20px;
+  padding: 12px 16px;
   border: 2px solid #5DD27C;
   border-radius: 360px;
   background: #ffffff;
   color: #000000;
   transition: background-color 0.3s ease;
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
 }
 
 .viewAll {
-  padding: 16px 24px;
-  overflow: hidden;
+  padding: 12px 16px;
   border-radius: 360px;
   background: #ffffff;
   border: 2px solid #bcbcbc;
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
   color: #000000;
 }
 
 .black-button {
-  padding: 18px 48px;
+  padding: 12px 36px;
   border-radius: 360px;
   background: #000000;
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
   color: #ffffff;
 }
@@ -63,24 +52,22 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
   text-align: left;
   color: #ffffff;
-  text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  text-shadow: 0px 2px 2px rgba(0, 0, 0, 0.25);
 }
 
 /* === Other Elements === */
 .base-styles {
   font-weight: 400;
-  font-size: 18px;
-  line-height: 21px;
+  font-size: 14px;
+  line-height: 18px;
   white-space: nowrap;
-  /* ❌ Removed color: #ffffff; */
 }
 
-/* ✅ Explicitly define correct text colors per variant */
 .white-button,
 .viewAll {
   color: #000000;
@@ -93,12 +80,12 @@
 }
 
 .featured-badge {
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-radius: 360px;
   background: #ffffff;
-  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-  font-size: 12px;
-  line-height: 14px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
+  font-size: 10px;
+  line-height: 12px;
   white-space: nowrap;
   color: #000000;
 }
@@ -108,19 +95,31 @@
   overflow: visible;
   border-radius: 360px;
   background: #ffffff;
-  border: 2px solid #d2d2d2;
+  border: 1.5px solid #d2d2d2;
+  padding: 12px 20px;
 }
 
 .heading1 {
-  font-size: 36px;
-  line-height: 43px;
+  font-size: 28px;
+  line-height: 34px;
   white-space: nowrap;
   color: #000000;
 }
 
 h2 {
-  font-size: 28px;
-  line-height: 38px;
+  font-size: 22px;
+  line-height: 28px;
   white-space: nowrap;
   font-weight: 500;
+}
+
+/* === Containers === */
+.rounded-outer {
+  border-radius: 24px;
+  overflow: hidden;
+  background-color: #f5f5f5;
+}
+
+.sharp-inner {
+  border-radius: 0 !important;
 }

@@ -17,7 +17,10 @@ import {
   Filter,
   ChevronDown,
   SortAsc,
-  Building2
+  Building2,
+  ChevronLeft,
+  // Settings,
+  // Menu
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Navbar from '../components/Navbar';
@@ -49,6 +52,7 @@ interface UIState {
   viewMode: 'grid' | 'list';
   showFilters: boolean;
   showSortMenu: boolean;
+  showMobileSearch: boolean;
 }
 
 // Constants
@@ -97,7 +101,7 @@ const SORT_OPTIONS = [
 
 /**
  * Enhanced SearchResults Component
- * Enterprise-grade property search with advanced filtering and clean architecture
+ * Mobile-first responsive design with improved UX
  */
 const SearchResults = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -116,7 +120,8 @@ const SearchResults = () => {
   const [uiState, setUIState] = useState<UIState>({
     viewMode: 'grid',
     showFilters: false,
-    showSortMenu: false
+    showSortMenu: false,
+    showMobileSearch: false
   });
 
   const [filters, setFilters] = useState<FilterState>({ amenity_ids: [] });
@@ -267,7 +272,7 @@ const SearchResults = () => {
     const params = buildUrlParams(filters);
     setSearchParams(params);
     performSearch(filters, 1);
-    setUIState(prev => ({ ...prev, showFilters: false }));
+    setUIState(prev => ({ ...prev, showFilters: false, showMobileSearch: false }));
   }, [filters, buildUrlParams, setSearchParams, performSearch]);
 
   const clearAllFilters = useCallback(() => {
@@ -319,16 +324,34 @@ const SearchResults = () => {
     performSearch(urlFilters, 1);
   }, [searchParams, parseUrlFilters, performSearch]);
 
+  // Close mobile overlays when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setUIState(prev => ({ ...prev, showSortMenu: false }));
+    };
+
+    if (uiState.showSortMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [uiState.showSortMenu]);
+
   // Render helpers
   const renderActiveFilters = () => {
     if (activeFilterCount === 0) return null;
 
     return (
-      <div className="flex flex-wrap gap-2 mt-2">
+      <div className="flex flex-wrap gap-2 mt-3 px-4 sm:px-0">
         {filters.property_type && (
           <FilterTag
             label={PROPERTY_TYPES.find(t => t.value === filters.property_type)?.label || filters.property_type}
             onRemove={() => removeFilter('property_type')}
+          />
+        )}
+        {filters.listing_type && (
+          <FilterTag
+            label={filters.listing_type === 'sale' ? 'For Sale' : 'For Rent'}
+            onRemove={() => removeFilter('listing_type')}
           />
         )}
         {filters.min_bedrooms && (
@@ -341,6 +364,18 @@ const SearchResults = () => {
           <FilterTag
             label={`Price: ${filters.min_price ? `D${filters.min_price.toLocaleString()}` : '0'} - ${filters.max_price ? `D${filters.max_price.toLocaleString()}` : '∞'}`}
             onRemove={() => removeFilter('price')}
+          />
+        )}
+        {filters.city && (
+          <FilterTag
+            label={filters.city}
+            onRemove={() => removeFilter('city')}
+          />
+        )}
+        {filters.featured_only && (
+          <FilterTag
+            label="Featured"
+            onRemove={() => removeFilter('featured_only')}
           />
         )}
       </div>
@@ -357,12 +392,12 @@ const SearchResults = () => {
     }
 
     return (
-      <>
+      <div className="px-4 sm:px-0">
         <div className={`grid ${
           uiState.viewMode === 'grid'
             ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             : 'grid-cols-1'
-        } gap-6 mb-8`}>
+        } gap-4 sm:gap-6 mb-8`}>
           {searchState.properties.map((property) => (
             <ListingCard
               key={property.id}
@@ -386,10 +421,10 @@ const SearchResults = () => {
               variant="colored"
               onClick={handleLoadMore}
               disabled={searchState.loading}
-              className="px-8 py-3"
+              className="px-6 sm:px-8 py-3 w-full sm:w-auto"
             >
               {searchState.loading ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading...
                 </span>
@@ -399,7 +434,7 @@ const SearchResults = () => {
             </Button>
           </div>
         )}
-      </>
+      </div>
     );
   };
 
@@ -407,51 +442,112 @@ const SearchResults = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Search Header */}
-        <SearchHeader 
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onApplyFilters={applyFilters}
-          onQuickFilter={handleQuickFilter}
-          onShowFilters={() => setUIState(prev => ({ ...prev, showFilters: true }))}
-          activeFilterCount={activeFilterCount}
-          loading={searchState.loading}
-        />
+      <div className="max-w-7xl mx-auto pb-6">
+        {/* Mobile Search Header */}
+        <div className="lg:hidden bg-white border-b border-gray-200">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => setUIState(prev => ({ ...prev, showMobileSearch: true }))}
+                className="flex-1 flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl text-left text-gray-500"
+              >
+                <Search className="h-5 w-5" />
+                <span className="truncate">
+                  {filters.search_text || 'Search properties...'}
+                </span>
+              </button>
+              <button
+                onClick={() => setUIState(prev => ({ ...prev, showFilters: true }))}
+                className="ml-3 p-3 bg-[#7fd783] text-white rounded-xl relative"
+              >
+                <Filter className="h-5 w-5" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            
+            {/* Mobile Quick Filter Buttons */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <MobileFilterButton
+                active={filters.listing_type === 'sale'}
+                onClick={() => handleQuickFilter('listing_type', 'sale')}
+              >
+                For Sale
+              </MobileFilterButton>
+              <MobileFilterButton
+                active={filters.listing_type === 'rent'}
+                onClick={() => handleQuickFilter('listing_type', 'rent')}
+              >
+                For Rent
+              </MobileFilterButton>
+              <MobileFilterButton
+                active={!!filters.featured_only}
+                onClick={() => handleQuickFilter('featured_only', true)}
+              >
+                <Star className="h-4 w-4 mr-1" />
+                Featured
+              </MobileFilterButton>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Search Header */}
+        <div className="hidden lg:block px-4 pt-6">
+          <SearchHeader 
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onApplyFilters={applyFilters}
+            onQuickFilter={handleQuickFilter}
+            onShowFilters={() => setUIState(prev => ({ ...prev, showFilters: true }))}
+            activeFilterCount={activeFilterCount}
+            loading={searchState.loading}
+          />
+        </div>
 
         {/* Error Display */}
         {searchState.error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+          <div className="mx-4 sm:mx-4 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <p>{searchState.error}</p>
           </div>
         )}
 
         {/* Results Header */}
-        <ResultsHeader
-          totalCount={searchState.totalCount}
-          city={filters.city}
-          currentSort={currentSortLabel}
-          viewMode={uiState.viewMode}
-          showSortMenu={uiState.showSortMenu}
-          onViewModeChange={(mode) => setUIState(prev => ({ ...prev, viewMode: mode }))}
-          onSortMenuToggle={() => setUIState(prev => ({ ...prev, showSortMenu: !prev.showSortMenu }))}
-          onSort={handleSort}
-          sortOptions={SORT_OPTIONS}
-          activeFilters={renderActiveFilters()}
-        />
-
-        {/* Click outside to close sort menu */}
-        {uiState.showSortMenu && (
-          <div
-            className="fixed inset-0 z-5"
-            onClick={() => setUIState(prev => ({ ...prev, showSortMenu: false }))}
+        <div className="mt-4 lg:mt-6">
+          <ResultsHeader
+            totalCount={searchState.totalCount}
+            city={filters.city}
+            currentSort={currentSortLabel}
+            viewMode={uiState.viewMode}
+            showSortMenu={uiState.showSortMenu}
+            onViewModeChange={(mode) => setUIState(prev => ({ ...prev, viewMode: mode }))}
+            onSortMenuToggle={() => setUIState(prev => ({ ...prev, showSortMenu: !prev.showSortMenu }))}
+            onSort={handleSort}
+            sortOptions={SORT_OPTIONS}
+            activeFilters={renderActiveFilters()}
           />
-        )}
+        </div>
 
         {/* Search Results */}
-        {renderSearchResults()}
+        <div className="mt-4 lg:mt-6">
+          {renderSearchResults()}
+        </div>
       </div>
+
+      {/* Mobile Search Modal */}
+      {uiState.showMobileSearch && (
+        <MobileSearchModal
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onApplyFilters={applyFilters}
+          onClose={() => setUIState(prev => ({ ...prev, showMobileSearch: false }))}
+          onQuickFilter={handleQuickFilter}
+          loading={searchState.loading}
+        />
+      )}
 
       {/* Filters Modal */}
       {uiState.showFilters && (
@@ -474,21 +570,46 @@ const SearchResults = () => {
   );
 };
 
+// Mobile Filter Button Component
+const MobileFilterButton = ({ 
+  active, 
+  onClick, 
+  children 
+}: { 
+  active: boolean; 
+  onClick: () => void; 
+  children: React.ReactNode; 
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center justify-center gap-1 px-4 py-2 rounded-full border transition-colors whitespace-nowrap text-sm font-medium ${
+      active
+        ? 'bg-[#7fd783] border-[#7fd783] text-white'
+        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+    }`}
+  >
+    {children}
+  </button>
+);
+
 // Sub-components for better organization
 const FilterTag = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
-  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-sm rounded-md">
-    {label}
-    <button onClick={onRemove} className="hover:bg-green-200 rounded-sm p-0.5">
+  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-[#7fd783] text-sm rounded-full border border-green-200">
+    <span className="truncate max-w-[120px] sm:max-w-none">{label}</span>
+    <button 
+      onClick={onRemove} 
+      className="hover:bg-green-200 rounded-full p-0.5 transition-colors"
+    >
       <X className="h-3 w-3" />
     </button>
   </span>
 );
 
 const LoadingState = () => (
-  <div className="flex flex-col items-center justify-center h-96">
-    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-6"></div>
-    <h3 className="text-xl font-medium text-gray-700">Finding properties...</h3>
-    <p className="text-gray-500 mt-2">This may take a moment</p>
+  <div className="flex flex-col items-center justify-center h-64 sm:h-96 px-4">
+    <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-[#7fd783] mb-4 sm:mb-6"></div>
+    <h3 className="text-lg sm:text-xl font-medium text-gray-700 text-center">Finding properties...</h3>
+    <p className="text-gray-500 mt-2 text-center text-sm sm:text-base">This may take a moment</p>
   </div>
 );
 
@@ -496,26 +617,140 @@ const EmptyState = ({ onClearFilters, onGoHome }: {
   onClearFilters: () => void; 
   onGoHome: () => void; 
 }) => (
-  <div className="text-center py-16 bg-white rounded-2xl">
-    <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100 rounded-full">
-      <Search className="h-12 w-12 text-gray-400" />
+  <div className="text-center py-12 sm:py-16 bg-white rounded-2xl mx-4 sm:mx-0">
+    <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 flex items-center justify-center bg-gray-100 rounded-full">
+      <Search className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
     </div>
-    <h3 className="text-2xl font-semibold text-gray-900 mb-2">No properties found</h3>
-    <p className="text-gray-600 mb-8 max-w-md mx-auto">
+    <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">No properties found</h3>
+    <p className="text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto px-4">
       Try adjusting your search criteria or clearing some filters.
     </p>
-    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-      <Button variant="colored" onClick={onClearFilters} className="px-6">
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+      <Button variant="colored" onClick={onClearFilters} className="px-6 py-3">
         Clear All Filters
       </Button>
-      <Button variant="white" onClick={onGoHome} className="px-6 border-gray-300">
+      <Button variant="white" onClick={onGoHome} className="px-6 py-3 border-gray-300">
         Back to Home
       </Button>
     </div>
   </div>
 );
 
-// Sub-components
+// Mobile Search Modal
+const MobileSearchModal = ({
+  filters,
+  onFilterChange,
+  onApplyFilters,
+  onClose,
+  onQuickFilter,
+  loading
+}: {
+  filters: FilterState;
+  onFilterChange: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
+  onApplyFilters: () => void;
+  onClose: () => void;
+  onQuickFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
+  loading: boolean;
+}) => (
+  <div className="fixed inset-0 bg-white z-50 lg:hidden">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+        <h2 className="text-lg font-semibold text-gray-900">Search Properties</h2>
+        <div className="w-10" /> {/* Spacer */}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Search Input */}
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search properties, locations, or features..."
+            className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7fd783] focus:border-transparent text-gray-900 placeholder-gray-500 text-lg"
+            value={filters.search_text || ''}
+            onChange={(e) => onFilterChange('search_text', e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        {/* Quick Filters */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-gray-900">Quick Filters</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <QuickFilterButton
+              active={filters.listing_type === 'sale'}
+              onClick={() => onQuickFilter('listing_type', 'sale')}
+            >
+              For Sale
+            </QuickFilterButton>
+            <QuickFilterButton
+              active={filters.listing_type === 'rent'}
+              onClick={() => onQuickFilter('listing_type', 'rent')}
+            >
+              For Rent
+            </QuickFilterButton>
+            <QuickFilterButton
+              active={!!filters.featured_only}
+              onClick={() => onQuickFilter('featured_only', true)}
+              className="col-span-2"
+            >
+              <Star className="h-4 w-4 inline mr-2" />
+              Featured Properties
+            </QuickFilterButton>
+          </div>
+        </div>
+
+        {/* Location Input */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Enter city or area..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7fd783] focus:border-[#7fd783] text-gray-900 placeholder-gray-500"
+              value={filters.city || ''}
+              onChange={(e) => onFilterChange('city', e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
+        <Button
+          variant="colored"
+          onClick={onApplyFilters}
+          className="w-full py-4 text-lg font-medium"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Searching...
+            </span>
+          ) : 'Search Properties'}
+        </Button>
+        <button
+          onClick={onClose}
+          className="w-full py-3 text-gray-600 font-medium"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// Enhanced Search Header for Desktop
 const SearchHeader = ({ 
   filters, 
   onFilterChange, 
@@ -542,7 +777,7 @@ const SearchHeader = ({
           <input
             type="text"
             placeholder="Search properties, locations, or features..."
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7fd783] focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
             value={filters.search_text || ''}
             onChange={(e) => onFilterChange('search_text', e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && onApplyFilters()}
@@ -557,7 +792,7 @@ const SearchHeader = ({
             <Filter className="h-5 w-5" />
             <span className="hidden sm:inline">Filters</span>
             {activeFilterCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-green-600 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="absolute -top-2 -right-2 bg-[#7fd783] text-white text-xs rounded-full h-6 w-6 flex items-center justify-center group-hover:scale-110 transition-transform">
                 {activeFilterCount}
               </span>
             )}
@@ -608,19 +843,21 @@ const SearchHeader = ({
 const QuickFilterButton = ({ 
   active, 
   onClick, 
-  children 
+  children,
+  className = ""
 }: { 
   active: boolean; 
   onClick: () => void; 
-  children: React.ReactNode; 
+  children: React.ReactNode;
+  className?: string;
 }) => (
   <button
     onClick={onClick}
     className={`px-4 py-2 rounded-lg border transition-colors ${
       active
-        ? 'bg-green-100 border-green-300 text-green-700'
+        ? 'bg-green-100 border-green-300 text-[#7fd783]'
         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-    }`}
+    } ${className}`}
   >
     {children}
   </button>
@@ -649,81 +886,91 @@ const ResultsHeader = ({
   sortOptions: readonly { label: string; value: string; order: string; }[];
   activeFilters: React.ReactNode;
 }) => (
-  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-    <div>
-      <h1 className="text-2xl font-semibold text-gray-900">
-        {totalCount > 0 ? (
-          <>
-            {totalCount.toLocaleString()} {totalCount === 1 ? 'Property' : 'Properties'} Found
-          </>
-        ) : (
-          'No Properties Found'
-        )}
-      </h1>
-      {city && (
-        <p className="text-gray-600 mt-1 flex items-center gap-1">
-          <MapPin className="h-4 w-4" />
-          in {city}
-        </p>
-      )}
-      {activeFilters}
-    </div>
+  <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+    <div className="flex flex-col space-y-4">
+      {/* Header Info */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">
+            {totalCount > 0 ? (
+              <>
+                {totalCount.toLocaleString()} {totalCount === 1 ? 'Property' : 'Properties'} Found
+              </>
+            ) : (
+              'No Properties Found'
+            )}
+          </h1>
+          {city && (
+            <p className="text-gray-600 mt-1 flex items-center gap-1 text-sm sm:text-base">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">in {city}</span>
+            </p>
+          )}
+        </div>
 
-    <div className="flex items-center gap-4">
-      {/* Sort Dropdown */}
-      <div className="relative">
-        <button
-          onClick={onSortMenuToggle}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <SortAsc className="h-4 w-4" />
-          <span className="hidden sm:inline">{currentSort}</span>
-          <ChevronDown className="h-4 w-4" />
-        </button>
+        {/* Controls */}
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          {/* Sort Dropdown */}
+          <div className="relative flex-1 sm:flex-none">
+            <button
+              onClick={onSortMenuToggle}
+              className="flex items-center justify-between w-full sm:w-auto gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+            >
+              <div className="flex items-center gap-2">
+                <SortAsc className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate max-w-[120px] sm:max-w-none">{currentSort}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 flex-shrink-0" />
+            </button>
 
-        {showSortMenu && (
-          <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-            {sortOptions.map((option) => (
-              <button
-                key={`${option.value}-${option.order}`}
-                onClick={() => onSort(option.value, option.order)}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors"
-              >
-                {option.label}
-              </button>
-            ))}
+            {showSortMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 sm:w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                {sortOptions.map((option) => (
+                  <button
+                    key={`${option.value}-${option.order}`}
+                    onClick={() => onSort(option.value, option.order)}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors text-sm sm:text-base"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600 hidden sm:inline">View:</span>
-        <div className="flex items-center bg-white rounded-xl border border-gray-200 p-1">
-          <button
-            onClick={() => onViewModeChange('grid')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-            aria-label="Grid view"
-          >
-            <Grid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-            aria-label="List view"
-          >
-            <List className="h-4 w-4" />
-          </button>
+          {/* View Mode Toggle - Hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-sm text-gray-600">View:</span>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => onViewModeChange('grid')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-[#7fd783] shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                aria-label="Grid view"
+              >
+                <Grid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onViewModeChange('list')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white text-[#7fd783] shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                aria-label="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Active Filters */}
+      {activeFilters}
     </div>
   </div>
 );
@@ -756,30 +1003,32 @@ const FiltersModal = ({
   roomOptions: readonly { label: string; value?: number; }[];
 }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
       {/* Modal Header */}
-      <div className="flex justify-between items-center p-6 border-b bg-gray-50">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900">Property Filters</h3>
-          <p className="text-gray-600 mt-1">Narrow down your search to find the perfect property</p>
+      <div className="flex justify-between items-center p-4 sm:p-6 border-b bg-gray-50">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Property Filters</h3>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base hidden sm:block">
+            Narrow down your search to find the perfect property
+          </p>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-200 rounded-lg transition-colors ml-4"
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
       </div>
 
       {/* Modal Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           {/* Property Type */}
           <FilterSection
             title="Property Type"
-            icon={<Home className="h-5 w-5 text-green-600" />}
+            icon={<Home className="h-5 w-5 text-[#7fd783]" />}
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {propertyTypes.map((type) => {
                 const IconComponent = type.icon;
                 return (
@@ -789,7 +1038,7 @@ const FiltersModal = ({
                     onClick={() => onFilterChange('property_type', type.value as PropertyListing['property_type'] || undefined)}
                   >
                     <IconComponent className="h-4 w-4" />
-                    <span className="text-sm">{type.label}</span>
+                    <span className="text-xs sm:text-sm truncate">{type.label}</span>
                   </FilterButton>
                 );
               })}
@@ -799,26 +1048,26 @@ const FiltersModal = ({
           {/* Listing Type */}
           <FilterSection
             title="Listing Type"
-            icon={<DollarSign className="h-5 w-5 text-green-600" />}
+            icon={<DollarSign className="h-5 w-5 text-[#7fd783]" />}
           >
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <FilterButton
                 active={!filters.listing_type}
                 onClick={() => onFilterChange('listing_type', undefined)}
               >
-                All
+                <span className="text-xs sm:text-sm">All</span>
               </FilterButton>
               <FilterButton
                 active={filters.listing_type === 'sale'}
                 onClick={() => onFilterChange('listing_type', 'sale')}
               >
-                For Sale
+                <span className="text-xs sm:text-sm">For Sale</span>
               </FilterButton>
               <FilterButton
                 active={filters.listing_type === 'rent'}
                 onClick={() => onFilterChange('listing_type', 'rent')}
               >
-                For Rent
+                <span className="text-xs sm:text-sm">For Rent</span>
               </FilterButton>
             </div>
           </FilterSection>
@@ -826,10 +1075,10 @@ const FiltersModal = ({
           {/* Price Range */}
           <FilterSection
             title="Price Range"
-            icon={<DollarSign className="h-5 w-5 text-green-600" />}
+            icon={<DollarSign className="h-5 w-5 text-[#7fd783]" />}
           >
             <select
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7fd783] focus:border-[#7fd783] transition-all duration-200 text-gray-900 text-sm sm:text-base"
               value={priceRanges.findIndex(range =>
                 range.min === filters.min_price && range.max === filters.max_price
               )}
@@ -848,16 +1097,16 @@ const FiltersModal = ({
           {/* Bedrooms */}
           <FilterSection
             title="Bedrooms"
-            icon={<Bed className="h-5 w-5 text-green-600" />}
+            icon={<Bed className="h-5 w-5 text-[#7fd783]" />}
           >
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {roomOptions.map((option) => (
                 <FilterButton
                   key={option.label}
                   active={filters.min_bedrooms === option.value}
                   onClick={() => onFilterChange('min_bedrooms', option.value)}
                 >
-                  {option.label}
+                  <span className="text-xs sm:text-sm">{option.label}</span>
                 </FilterButton>
               ))}
             </div>
@@ -866,16 +1115,16 @@ const FiltersModal = ({
           {/* Bathrooms */}
           <FilterSection
             title="Bathrooms"
-            icon={<Bath className="h-5 w-5 text-green-600" />}
+            icon={<Bath className="h-5 w-5 text-[#7fd783]" />}
           >
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {roomOptions.map((option) => (
                 <FilterButton
                   key={option.label}
                   active={filters.min_bathrooms === option.value}
                   onClick={() => onFilterChange('min_bathrooms', option.value)}
                 >
-                  {option.label}
+                  <span className="text-xs sm:text-sm">{option.label}</span>
                 </FilterButton>
               ))}
             </div>
@@ -884,14 +1133,14 @@ const FiltersModal = ({
           {/* Location */}
           <FilterSection
             title="Location"
-            icon={<MapPin className="h-5 w-5 text-green-600" />}
+            icon={<MapPin className="h-5 w-5 text-[#7fd783]" />}
           >
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Enter city or area..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7fd783] focus:border-[#7fd783] transition-all duration-200 text-gray-900 placeholder-gray-500 text-sm sm:text-base"
                 value={filters.city || ''}
                 onChange={(e) => onFilterChange('city', e.target.value)}
               />
@@ -900,12 +1149,12 @@ const FiltersModal = ({
         </div>
 
         {/* Amenities Section - Full Width */}
-        <div className="mt-8 space-y-4">
-          <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-            <Star className="h-5 w-5 text-green-600" />
+        <div className="mt-6 sm:mt-8 space-y-4">
+          <h4 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#7fd783]" />
             Amenities
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {amenities.map((amenity) => (
               <label
                 key={amenity.id}
@@ -913,33 +1162,33 @@ const FiltersModal = ({
               >
                 <input
                   type="checkbox"
-                  className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#7fd783] border-gray-300 rounded focus:ring-[#7fd783] focus:ring-2"
                   checked={filters.amenity_ids?.includes(amenity.id) || false}
                   onChange={() => onAmenityToggle(amenity.id)}
                 />
-                <span className="text-sm text-gray-700 flex-1">{amenity.name}</span>
+                <span className="text-xs sm:text-sm text-gray-700 flex-1">{amenity.name}</span>
               </label>
             ))}
           </div>
           {amenities.length === 0 && (
-            <p className="text-gray-500 text-center py-4">No amenities available</p>
+            <p className="text-gray-500 text-center py-4 text-sm sm:text-base">No amenities available</p>
           )}
         </div>
 
         {/* Featured Properties Toggle */}
-        <div className="mt-8">
-          <label className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl cursor-pointer hover:from-green-100 hover:to-blue-100 transition-colors border border-green-200">
+        <div className="mt-6 sm:mt-8">
+          <label className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl cursor-pointer hover:from-green-100 hover:to-blue-100 transition-colors border border-green-200">
             <input
               type="checkbox"
-              className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+              className="w-4 h-4 sm:w-5 sm:h-5 text-[#7fd783] border-gray-300 rounded focus:ring-[#7fd783] focus:ring-2"
               checked={filters.featured_only || false}
               onChange={(e) => onFilterChange('featured_only', e.target.checked)}
             />
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-green-600" />
-              <div>
-                <h5 className="font-semibold text-gray-900">Featured Properties Only</h5>
-                <p className="text-sm text-gray-600">Show only our premium featured properties</p>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-[#7fd783] flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h5 className="font-semibold text-gray-900 text-sm sm:text-base">Featured Properties Only</h5>
+                <p className="text-xs sm:text-sm text-gray-600">Show only our premium featured properties</p>
               </div>
             </div>
           </label>
@@ -947,18 +1196,18 @@ const FiltersModal = ({
       </div>
 
       {/* Modal Footer */}
-      <div className="p-6 border-t bg-gray-50 flex gap-3">
+      <div className="p-4 sm:p-6 border-t bg-gray-50 flex flex-col sm:flex-row gap-3">
         <Button
           variant="white"
           onClick={onClearFilters}
-          className="flex-1 py-3 text-base font-medium border-gray-300"
+          className="flex-1 py-3 text-sm sm:text-base font-medium border-gray-300"
         >
           Clear All Filters
         </Button>
         <Button
           variant="colored"
           onClick={onApplyFilters}
-          className="flex-1 py-3 text-base font-medium"
+          className="flex-1 py-3 text-sm sm:text-base font-medium"
           disabled={loading}
         >
           {loading ? (
@@ -984,8 +1233,8 @@ const FilterSection = ({
   icon: React.ReactNode; 
   children: React.ReactNode; 
 }) => (
-  <div className="space-y-4">
-    <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+  <div className="space-y-3 sm:space-y-4">
+    <h4 className="font-bold text-base sm:text-lg text-gray-900 flex items-center gap-2">
       {icon}
       {title}
     </h4>
@@ -1004,9 +1253,9 @@ const FilterButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all duration-200 ${
+    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl border transition-all duration-200 min-h-[40px] sm:min-h-[48px] ${
       active
-        ? 'border-green-600 bg-green-50 text-green-700 font-medium shadow-sm'
+        ? 'border-[#7fd783] bg-green-50 text-[#7fd783] font-medium shadow-sm'
         : 'border-gray-200 hover:border-gray-400 text-gray-700'
     }`}
   >

@@ -1,9 +1,10 @@
-// src/components/AuthForm.tsx - Multi-Step Form Implementation
-import { useEffect, useState } from "react";
+// src/components/AuthForm.tsx - Enhanced with Brand Design
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import InputField from "./InputField";
+import RememberMeCheckbox from "./RememberMeCheckbox";
 import "../styles/auth.css";
 
 interface AuthFormProps {
@@ -24,6 +25,7 @@ interface FormData {
   licenseNumber?: string;
   bio?: string;
   website?: string;
+  rememberMe?: boolean;
 }
 
 interface StepConfig {
@@ -39,16 +41,64 @@ interface FieldConfig {
   name: keyof FormData;
   type: 'text' | 'email' | 'password' | 'tel' | 'url' | 'textarea' | 'select';
   placeholder: string;
+  label?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
-  validation?: (value: string) => string | null;
+  validation?: (value: string, formData: FormData) => string | null;
+  hint?: string;
 }
 
-// Configure your form steps here - easily modifiable
+// Enhanced field validation functions
+const validationRules = {
+  email: (value: string) => {
+    if (!value.trim()) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) return 'Please enter a valid email address';
+    return null;
+  },
+  
+  password: (value: string) => {
+    if (!value) return 'Password is required';
+    if (value.length < 8) return 'Password must be at least 8 characters long';
+    if (!/(?=.*[a-z])/.test(value)) return 'Password must contain at least one lowercase letter';
+    if (!/(?=.*[A-Z])/.test(value)) return 'Password must contain at least one uppercase letter';
+    if (!/(?=.*\d)/.test(value)) return 'Password must contain at least one number';
+    return null;
+  },
+  
+  confirmPassword: (value: string, formData: FormData) => {
+    if (!value) return 'Please confirm your password';
+    if (value !== formData.password) return 'Passwords do not match';
+    return null;
+  },
+  
+  fullName: (value: string) => {
+    if (!value.trim()) return 'Full name is required';
+    if (value.trim().length < 2) return 'Name must be at least 2 characters';
+    return null;
+  },
+  
+  phone: (value: string) => {
+    if (!value) return null; // Optional field
+    const cleanPhone = value.replace(/[\s\-\(\)]/g, '');
+    if (!/^\+?[0-9]{7,15}$/.test(cleanPhone)) {
+      return 'Please enter a valid phone number';
+    }
+    return null;
+  },
+  
+  agencyName: (value: string) => {
+    if (!value.trim()) return 'Agency name is required';
+    if (value.trim().length < 2) return 'Agency name must be at least 2 characters';
+    return null;
+  }
+};
+
+// Enhanced form configuration
 const FORM_STEPS: StepConfig[] = [
   {
     id: 'role',
-    title: 'What describes you best?',
+    title: 'Welcome to iHomes! 🏠',
     subtitle: 'Choose your role to get started',
     fields: [
       {
@@ -71,22 +121,16 @@ const FORM_STEPS: StepConfig[] = [
       {
         name: 'fullName',
         type: 'text',
-        placeholder: 'Your full name',
+        placeholder: 'Full Name',
         required: true,
-        validation: (value) => {
-          if (value.trim().length < 2) return 'Name must be at least 2 characters';
-          return null;
-        }
+        validation: validationRules.fullName
       },
       {
         name: 'email',
         type: 'email',
-        placeholder: 'Your email address',
+        placeholder: 'Email',
         required: true,
-        validation: (value) => {
-          if (!/\S+@\S+\.\S+/.test(value)) return 'Please enter a valid email';
-          return null;
-        }
+        validation: validationRules.email
       }
     ]
   },
@@ -99,57 +143,48 @@ const FORM_STEPS: StepConfig[] = [
       {
         name: 'agencyName',
         type: 'text',
-        placeholder: 'Your agency name',
-        required: true
+        placeholder: 'Agency Name',
+        required: true,
+        validation: validationRules.agencyName
       },
       {
         name: 'licenseNumber',
         type: 'text',
-        placeholder: 'License number (optional)',
+        placeholder: 'License Number (Optional)',
         required: false
       },
       {
         name: 'phone',
         type: 'tel',
-        placeholder: 'Business phone number',
+        placeholder: 'Business Phone',
         required: false,
-        validation: (value) => {
-          if (value && !/^\+?[0-9]{7,15}$/.test(value.replace(/\s/g, ''))) {
-            return 'Please enter a valid phone number';
-          }
-          return null;
-        }
+        validation: validationRules.phone
       }
     ]
   },
   {
     id: 'contact',
-    title: 'Contact Information',
-    subtitle: 'How can clients reach you? (Optional)',
+    title: 'Additional Contact Options',
+    subtitle: 'More ways for clients to reach you',
     showFor: ['agent'],
     fields: [
       {
         name: 'whatsappNumber',
         type: 'tel',
-        placeholder: 'WhatsApp number',
+        placeholder: 'WhatsApp Number (Optional)',
         required: false,
-        validation: (value) => {
-          if (value && !/^\+?[0-9]{7,15}$/.test(value.replace(/\s/g, ''))) {
-            return 'Please enter a valid WhatsApp number';
-          }
-          return null;
-        }
+        validation: validationRules.phone
       },
       {
         name: 'website',
         type: 'url',
-        placeholder: 'Your website (optional)',
+        placeholder: 'Website (Optional)',
         required: false
       },
       {
         name: 'bio',
         type: 'textarea',
-        placeholder: 'Brief description about yourself and services (optional)',
+        placeholder: 'Tell clients about your experience...',
         required: false
       }
     ]
@@ -162,21 +197,16 @@ const FORM_STEPS: StepConfig[] = [
       {
         name: 'password',
         type: 'password',
-        placeholder: 'Create a password (min 8 characters)',
+        placeholder: 'Password',
         required: true,
-        validation: (value) => {
-          if (value.length < 8) return 'Password must be at least 8 characters';
-          if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-            return 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
-          }
-          return null;
-        }
+        validation: validationRules.password
       },
       {
         name: 'confirmPassword',
         type: 'password',
-        placeholder: 'Confirm your password',
-        required: true
+        placeholder: 'Confirm Password',
+        required: true,
+        validation: validationRules.confirmPassword
       }
     ],
     validation: (data) => {
@@ -188,23 +218,23 @@ const FORM_STEPS: StepConfig[] = [
   }
 ];
 
-// Login steps (much simpler)
 const LOGIN_STEPS: StepConfig[] = [
   {
     id: 'login',
-    title: 'Welcome Back!',
-    subtitle: 'Sign in to your iHomes account',
+    title: 'Log In To Your',
+    subtitle: 'iHomes Account',
     fields: [
       {
         name: 'email',
         type: 'email',
-        placeholder: 'Your email address',
-        required: true
+        placeholder: 'Email',
+        required: true,
+        validation: validationRules.email
       },
       {
         name: 'password',
         type: 'password',
-        placeholder: 'Your password',
+        placeholder: 'Password',
         required: true
       }
     ]
@@ -224,82 +254,97 @@ export default function AuthForm({ mode }: AuthFormProps) {
     licenseNumber: "",
     bio: "",
     website: "",
+    rememberMe: false,
   });
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
   const navigate = useNavigate();
 
-  const steps = mode === 'signup' ? FORM_STEPS : LOGIN_STEPS;
-  const currentStep = steps[currentStepIndex];
-
-  // Filter steps based on user role
-  const getFilteredSteps = () => {
+  // Memoized filtered steps
+  const filteredSteps = useMemo(() => {
     if (mode === 'login') return LOGIN_STEPS;
-    
     return FORM_STEPS.filter(step => 
       !step.showFor || step.showFor.includes(formData.role)
     );
-  };
+  }, [mode, formData.role]);
 
-  const filteredSteps = getFilteredSteps();
+  const currentStep = filteredSteps[currentStepIndex];
   const isLastStep = currentStepIndex === filteredSteps.length - 1;
+  const isFirstStep = currentStepIndex === 0;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Enhanced input change handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateCurrentStep = () => {
-    const step = filteredSteps[currentStepIndex];
     
-    // Check field-level validation
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  }, [fieldErrors]);
+
+  // Enhanced validation
+  const validateField = useCallback((field: FieldConfig, value: string): string | null => {
+    if (field.required && !value.trim()) {
+      return `${field.placeholder} is required`;
+    }
+    
+    if (!field.required && !value.trim()) {
+      return null;
+    }
+    
+    if (field.validation) {
+      return field.validation(value, formData);
+    }
+    
+    return null;
+  }, [formData]);
+
+  const validateCurrentStep = useCallback(() => {
+    const step = filteredSteps[currentStepIndex];
+    const errors: Record<string, string> = {};
+    let hasErrors = false;
+    
     for (const field of step.fields) {
       const value = formData[field.name] as string || '';
+      const error = validateField(field, value);
       
-      if (field.required && !value.trim()) {
-        toast.error(`${field.placeholder} is required`);
-        return false;
-      }
-      
-      if (field.validation && value) {
-        const error = field.validation(value);
-        if (error) {
-          toast.error(error);
-          return false;
-        }
-      }
-    }
-    
-    // Check step-level validation
-    if (step.validation) {
-      const error = step.validation(formData);
       if (error) {
-        toast.error(error);
-        return false;
+        errors[field.name] = error;
+        hasErrors = true;
       }
     }
     
-    return true;
-  };
-
-  const handleNext = () => {
-    if (!validateCurrentStep()) return;
-    
-    // If role was just selected, recalculate filtered steps
-    if (currentStep.id === 'role') {
-      setCurrentStepIndex(1); // Move to next step in filtered list
-    } else {
-      setCurrentStepIndex(prev => prev + 1);
+    if (step.validation) {
+      const stepError = step.validation(formData);
+      if (stepError) {
+        toast.error(stepError);
+        hasErrors = true;
+      }
     }
-  };
+    
+    setFieldErrors(errors);
+    return !hasErrors;
+  }, [currentStepIndex, filteredSteps, formData, validateField]);
 
-  const handlePrevious = () => {
-    setCurrentStepIndex(prev => prev - 1);
-  };
+  const handleNext = useCallback(() => {
+    if (!validateCurrentStep()) return;
+    setCurrentStepIndex(prev => Math.min(prev + 1, filteredSteps.length - 1));
+    setFieldErrors({});
+  }, [validateCurrentStep, filteredSteps.length]);
 
+  const handlePrevious = useCallback(() => {
+    setCurrentStepIndex(prev => Math.max(prev - 1, 0));
+    setFieldErrors({});
+  }, []);
+
+  // Enhanced submit handler
   const handleSubmit = async () => {
     if (!validateCurrentStep()) return;
 
@@ -307,164 +352,114 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === "signup") {
-        console.log("Starting signup process with email confirmation...");
-        
         const redirectUrl = `${window.location.origin}/auth/callback`;
         
-
-        // Step 1: Create the auth user WITHOUT metadata to avoid trigger issues
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email.trim(),
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
           options: {
-            emailRedirectTo: redirectUrl
+            emailRedirectTo: redirectUrl,
+            data: {
+              full_name: formData.fullName.trim(),
+              role: formData.role
+            }
           },
         });
 
-        console.log("Signup response:", { data, error: signUpError });
-
         if (signUpError) {
-          console.error("Signup error details:", signUpError);
-          
           if (signUpError.message.includes("User already registered")) {
-            toast.error("An account with this email already exists. Please try logging in instead.");
-            return;
-          } else if (signUpError.message.includes("Invalid email")) {
-            toast.error("Please enter a valid email address");
+            toast.error("An account with this email already exists. Try logging in instead.");
+            setTimeout(() => navigate("/login"), 2000);
             return;
           }
-          
           throw signUpError;
         }
         
         if (!data.user) {
-          throw new Error("User creation failed - no user data returned");
+          throw new Error("User creation failed - please try again");
         }
 
-        // Step 2: Create the profile manually after user creation
+        // Create profile
         try {
           const profileData = {
             id: data.user.id,
-            email: formData.email.trim(),
+            email: formData.email.trim().toLowerCase(),
             full_name: formData.fullName.trim(),
             role: formData.role,
             email_confirmed: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            agency_name: formData.role === 'agent' ? formData.agencyName?.trim() || null : null,
-            license_number: formData.role === 'agent' ? formData.licenseNumber?.trim() || null : null,
-            phone: formData.role === 'agent' ? formData.phone?.replace(/\s/g, '') || null : null,
-            whatsapp_number: formData.role === 'agent' ? formData.whatsappNumber?.replace(/\s/g, '') || null : null,
-            bio: formData.role === 'agent' ? formData.bio?.trim() || null : null,
-            website: formData.role === 'agent' ? formData.website?.trim() || null : null
+            ...(formData.role === 'agent' && {
+              agency_name: formData.agencyName?.trim() || null,
+              license_number: formData.licenseNumber?.trim() || null,
+              phone: formData.phone?.replace(/\s/g, '') || null,
+              whatsapp_number: formData.whatsappNumber?.replace(/\s/g, '') || null,
+              bio: formData.bio?.trim() || null,
+              website: formData.website?.trim() || null
+            })
           };
 
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert(profileData);
-
-          if (profileError) {
-            console.error("Profile creation error:", profileError);
-            // Don't fail the signup process for profile creation errors
-            toast.warning("Account created but profile setup incomplete. You can complete it later.");
-          } else {
-            console.log("Profile created successfully");
-          }
+          await supabase.from('profiles').insert(profileData);
         } catch (profileErr) {
-          console.error("Error creating profile:", profileErr);
-          // Don't fail the signup process
+          console.error("Profile creation error:", profileErr);
         }
 
-        console.log("User created successfully, confirmation email sent");
         setEmailSent(true);
-        toast.success("Account created! Please check your email to confirm your account.");
+        toast.success("Account created successfully! Please check your email to confirm your account.");
         
       } else {
-        // Login logic
-        console.log("Attempting login...");
         const { data, error: loginError } = await supabase.auth.signInWithPassword({
-          email: formData.email.trim(),
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
         });
 
         if (loginError) {
-          console.error("Login error:", loginError);
-          
           if (loginError.message.includes("Invalid login credentials")) {
-            toast.error("Invalid email or password. Please check your credentials and try again.");
+            setFieldErrors({ 
+              email: "Invalid email or password",
+              password: "Invalid email or password"
+            });
           } else if (loginError.message.includes("Email not confirmed")) {
-            toast.error("Please confirm your email address before logging in. Check your inbox for the confirmation link.");
+            toast.error("Please confirm your email address first.");
+            setEmailSent(true);
           } else {
             toast.error(loginError.message || "Login failed. Please try again.");
           }
           return;
         }
 
-        if (!data.user) {
-          toast.error("Login failed - no user data received");
+        if (!data.user?.email_confirmed_at) {
+          toast.error("Please confirm your email address before logging in.");
+          setEmailSent(true);
           return;
         }
 
-        if (!data.user.email_confirmed_at) {
-          toast.error("Please confirm your email address before logging in. Check your inbox for the confirmation link.");
-          return;
-        }
-
-        console.log("Login successful");
-        toast.success("Successfully logged in!");
+        toast.success("Welcome back!");
         
-        // Update last login time
+        // Update last login
         try {
           await supabase
             .from('profiles')
-            .update({ last_login_at: new Date().toISOString() })
+            .update({ 
+              last_login_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
             .eq('id', data.user.id);
         } catch (error) {
           console.error("Error updating last login:", error);
         }
+
+        setTimeout(() => navigate("/dashboard", { replace: true }), 1000);
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? 
-        (err.message.includes("fetch") ? 
-          "Network error. Please check your connection and try again." : 
-          err.message) : 
-        "Something went wrong. Please try again.";
-      
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const resendConfirmationEmail = async () => {
-    if (!formData.email.trim()) {
-      toast.error("Please enter your email address");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: formData.email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
-
-      if (error) throw error;
-      toast.success("Confirmation email sent! Please check your inbox.");
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? 
-        error.message : 
-        'Failed to resend confirmation email';
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Session check and auth state listener (same as before)
+  // Session management
   useEffect(() => {
     let mounted = true;
 
@@ -473,8 +468,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (mounted) {
-          if (session?.user && session.user.email_confirmed_at) {
-            console.log("User already authenticated, redirecting to dashboard");
+          if (session?.user?.email_confirmed_at) {
             navigate("/dashboard", { replace: true });
             return;
           }
@@ -482,24 +476,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
         }
       } catch (error) {
         console.error("Session check error:", error);
-        if (mounted) {
-          setSessionChecked(true);
-        }
+        if (mounted) setSessionChecked(true);
       }
     };
 
     checkInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email_confirmed_at);
-      
       if (mounted && sessionChecked) {
         if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
-          console.log("User signed in with confirmed email, redirecting to dashboard");
           navigate("/dashboard", { replace: true });
-        } else if (event === 'SIGNED_IN' && !session?.user?.email_confirmed_at) {
-          console.log("User signed in but email not confirmed");
-          toast.warning("Please confirm your email address to continue");
         }
       }
     });
@@ -510,97 +496,100 @@ export default function AuthForm({ mode }: AuthFormProps) {
     };
   }, [navigate, sessionChecked]);
 
-  // Show loading while checking session
+  // Loading state
   if (!sessionChecked) {
     return (
       <div className="auth-container">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7fd783] mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Show email confirmation message
-  if (emailSent && mode === "signup") {
+  // Email confirmation state
+  if (emailSent) {
     return (
       <div className="auth-container">
         <Toaster richColors position="top-right" />
-        <div className="max-w-md mx-auto text-center">
-          <div className="bg-white rounded-lg p-8 shadow-lg">
-            <div className="text-green-500 text-5xl mb-4">📧</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Check Your Email
-            </h2>
-            <p className="text-gray-600 mb-6">
-              We've sent a confirmation link to <strong>{formData.email}</strong>. 
-              Please click the link to activate your account.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={resendConfirmationEmail}
-                disabled={loading}
-                className="w-full px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
-              >
-                {loading ? "Sending..." : "Resend Confirmation Email"}
-              </button>
-              <Link
-                to="/login"
-                className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center"
-              >
-                Back to Login
-              </Link>
-            </div>
+        <div className="text-center">
+          <div className="text-6xl mb-6">📧</div>
+          <h2 className="auth-title mb-4">Check Your Email</h2>
+          <p className="text-gray-600 mb-6 text-lg">
+            We've sent a confirmation link to <span className="font-semibold text-[#7fd783]">{formData.email}</span>.
+            Please click the link to activate your account.
+          </p>
+          
+          <div className="auth-form">
+            <button className="auth-button mb-4">
+              Resend Confirmation Email
+            </button>
+            <Link to="/login" className="links">
+              Back to Login
+            </Link>
           </div>
         </div>
       </div>
     );
   }
 
+  // Enhanced field renderer
   const renderField = (field: FieldConfig) => {
     const value = formData[field.name] as string || '';
+    const hasError = fieldErrors[field.name];
 
     if (field.type === 'select') {
       return (
-        <select
-          name={field.name}
-          value={value}
-          onChange={handleInputChange}
-          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-          required={field.required}
-        >
-          <option value="">{field.placeholder}</option>
-          {field.options?.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div key={field.name}>
+          <select
+            name={field.name}
+            value={value}
+            onChange={handleInputChange}
+            className={`auth-input ${hasError ? 'border-red-500' : ''}`}
+            required={field.required}
+          >
+            <option value="">{field.placeholder}</option>
+            {field.options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {hasError && <p className="text-red-500 text-sm mt-2 ml-4">{hasError}</p>}
+        </div>
       );
     }
 
     if (field.type === 'textarea') {
       return (
-        <textarea
-          name={field.name}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={handleInputChange}
-          rows={4}
-          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg resize-none"
-          required={field.required}
-        />
+        <div key={field.name}>
+          <textarea
+            name={field.name}
+            placeholder={field.placeholder}
+            value={value}
+            onChange={handleInputChange}
+            rows={4}
+            className={`auth-input resize-none h-32 ${hasError ? 'border-red-500' : ''}`}
+            required={field.required}
+          />
+          {hasError && <p className="text-red-500 text-sm mt-2 ml-4">{hasError}</p>}
+        </div>
       );
     }
 
     return (
-      <InputField
-        type={field.type}
-        name={field.name}
-        placeholder={field.placeholder}
-        value={value}
-        onChange={handleInputChange}
-      />
+      <div key={field.name}>
+        <InputField
+          type={field.type}
+          name={field.name}
+          placeholder={field.placeholder}
+          value={value}
+          onChange={handleInputChange}
+          className={hasError ? 'border-red-500' : ''}
+        />
+        {hasError && <p className="text-red-500 text-sm mt-2 ml-4">{hasError}</p>}
+      </div>
     );
   };
 
@@ -608,104 +597,115 @@ export default function AuthForm({ mode }: AuthFormProps) {
     <div className="auth-container">
       <Toaster richColors position="top-right" />
 
-      {/* Progress indicator for signup */}
+      {/* Progress indicator for signup - Added responsive container */}
       {mode === 'signup' && (
-        <div className="mb-8">
-          <div className="flex justify-center space-x-2">
-            {filteredSteps.map((_, index) => (
+        <div className="progress-container flex justify-center space-x-2 mb-6">
+          {filteredSteps.map((_, index) => (
+            <div key={index} className="flex items-center">
               <div
-                key={index}
-                className={`h-2 w-8 rounded-full transition-colors ${
-                  index <= currentStepIndex ? 'bg-blue-600' : 'bg-gray-300'
+                className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                  index < currentStepIndex ? 'bg-[#7fd783]' :
+                  index === currentStepIndex ? 'bg-[#7fd783] ring-4 ring-[#7fd783]/30' :
+                  'bg-gray-300'
                 }`}
               />
-            ))}
-          </div>
-          <p className="text-center text-sm text-gray-500 mt-2">
-            Step {currentStepIndex + 1} of {filteredSteps.length}
-          </p>
-        </div>
-      )}
-
-      <h2 className="auth-title">
-        {currentStep.title}
-      </h2>
-
-      {currentStep.subtitle && (
-        <p className="text-center text-gray-600 mb-8 text-lg">
-          {currentStep.subtitle}
-        </p>
-      )}
-
-      <div className="auth-form-wrapper">
-        <div className="auth-form space-y-6">
-          {currentStep.fields.map((field) => (
-            <div key={field.name}>
-              {renderField(field)}
+              {index < filteredSteps.length - 1 && (
+                <div
+                  className={`h-0.5 w-8 mx-2 transition-colors duration-300 ${
+                    index < currentStepIndex ? 'bg-[#7fd783]' : 'bg-gray-300'
+                  }`}
+                />
+              )}
             </div>
           ))}
+        </div>
+      )}
 
-          {/* Navigation buttons */}
-          <div className="flex flex-col space-y-4">
-            {mode === 'login' || isLastStep ? (
-              <button 
-                onClick={handleSubmit}
-                className="auth-button" 
-                disabled={loading}
-              >
-                {loading 
-                  ? (mode === "login" ? "Signing in..." : "Creating account...") 
-                  : (mode === "login" ? "Sign In" : "Create Account")
-                }
-              </button>
-            ) : (
-              <button 
-                onClick={handleNext}
-                className="auth-button"
-                type="button"
-              >
-                Continue
-              </button>
+      {/* Enhanced header */}
+      <div className="text-center mb-8">
+        {mode === 'login' && currentStep.subtitle ? (
+          <>
+            <h1 className="auth-title">{currentStep.title}</h1>
+            <h2 className="text-2xl font-medium mb-4">
+              <span className="text-[#7fd783]">{currentStep.subtitle.split(' ')[0]}</span>
+              <span className="text-black"> {currentStep.subtitle.split(' ').slice(1).join(' ')}</span>
+            </h2>
+          </>
+        ) : (
+          <>
+            <h1 className="auth-title mb-2">{currentStep.title}</h1>
+            {currentStep.subtitle && (
+              <p className="text-gray-600 text-lg">{currentStep.subtitle}</p>
             )}
+          </>
+        )}
+      </div>
 
-            {/* Back button for multi-step signup */}
-            {mode === 'signup' && currentStepIndex > 0 && (
-              <button
-                onClick={handlePrevious}
-                className="w-full px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-lg"
-                type="button"
-              >
-                Back
-              </button>
-            )}
-          </div>
+      <div className="auth-form-wrapper">
+        <div className="auth-form">
+          {/* Form fields */}
+          {currentStep.fields.map((field) => renderField(field))}
+
+          {/* Remember me checkbox for login */}
+          {mode === 'login' && (
+            <div className="flex items-center justify-between mb-4">
+              <RememberMeCheckbox
+                checked={formData.rememberMe || false}
+                onChange={(checked) => setFormData(prev => ({ ...prev, rememberMe: checked }))}
+              />
+              <Link to="/forgot-password" className="small-links">
+                Forgot Password?
+              </Link>
+            </div>
+          )}
+
+          {/* Primary action button */}
+          {mode === 'login' || isLastStep ? (
+            <button 
+              onClick={handleSubmit}
+              className="auth-button mb-4" 
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>{mode === "login" ? "Logging in..." : "Creating account..."}</span>
+                </div>
+              ) : (
+                mode === "login" ? "Log in" : "Sign Up"
+              )}
+            </button>
+          ) : (
+            <button 
+              onClick={handleNext}
+              className="auth-button mb-4"
+              type="button"
+            >
+              Continue
+            </button>
+          )}
+
+          {/* Back button for multi-step signup */}
+          {mode === 'signup' && !isFirstStep && (
+            <button
+              onClick={handlePrevious}
+              className="w-full px-6 py-4 text-gray-600 border border-gray-300 rounded-2xl hover:bg-gray-50 transition-all duration-200 font-medium text-lg mb-4"
+              type="button"
+            >
+              Back
+            </button>
+          )}
         </div>
 
+        {/* Footer link */}
         <Link
           to={mode === "login" ? "/signup" : "/login"}
-          className="links text-brand-secondary hover:underline mt-6 block text-center"
+          className="links"
         >
           {mode === "login"
             ? "Don't have an account? Sign Up"
             : "Already have an account? Sign In"}
         </Link>
-
-        {mode === "login" && (
-          <div className="text-center mt-4 space-y-2">
-            <Link
-              to="/auth/reset-password"
-              className="block text-sm text-gray-500 hover:text-gray-700 underline"
-            >
-              Forgot your password?
-            </Link>
-            <button
-              onClick={resendConfirmationEmail}
-              className="text-sm text-gray-500 hover:text-gray-700 underline"
-            >
-              Resend confirmation email
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

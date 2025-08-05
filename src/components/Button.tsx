@@ -76,7 +76,6 @@ const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
     padding: "12px 16px",
     borderRadius: "360px",
     background: "#ffffff",
-    boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.25)",
     color: "#000000",
     fontSize: "12px",
     lineHeight: "14px",

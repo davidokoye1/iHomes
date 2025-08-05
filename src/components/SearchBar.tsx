@@ -1,6 +1,6 @@
 // src/components/SearchBar.tsx - Enhanced with Database Integration
 import { useState, useEffect } from "react";
-import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search } from "lucide-react";
+import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search, X } from "lucide-react";
 import Button from "./Button";
 import { useSearch } from "../hooks/useSearch";
 import { PropertiesService } from "../services/properties";
@@ -17,14 +17,6 @@ interface Location {
   region: string;
   is_popular: boolean;
 }
-
-// interface Amenity {
-//   id: string;
-//   name: string;
-//   icon_name: string;
-//   category: string;
-//   is_popular: boolean;
-// }
 
 // Constants for price ranges and bedrooms (can be moved to database later)
 const PRICE_RANGES = [
@@ -62,6 +54,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const { searchParams, updateSearchParam, performSearch } = useSearch();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
+  const [isMobilePopupOpen, setIsMobilePopupOpen] = useState(false);
+  const [activeMobileDropdown, setActiveMobileDropdown] = useState<string | null>(null);
   
   // Database-driven state
   const [locations, setLocations] = useState<Location[]>([]);
@@ -96,8 +90,29 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const toggleDropdown = (dropdown: string) => {
-    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  // Prevent body scroll when mobile popup is open
+  useEffect(() => {
+    if (isMobilePopupOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobilePopupOpen]);
+
+  const toggleDropdown = (dropdown: string, isMobile = false) => {
+    if (isMobile) {
+      setActiveMobileDropdown(activeMobileDropdown === dropdown ? null : dropdown);
+    } else {
+      setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+    }
+  };
+
+  const handleMobileSearch = () => {
+    setIsMobilePopupOpen(false);
+    performSearch();
   };
 
   // Display functions
@@ -160,21 +175,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   }
 
   // Dropdown components
-  const LocationDropdown = () => (
-    <div className="relative dropdown-container">
+  const LocationDropdown = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
       <button
-        onClick={() => toggleDropdown("location")}
-        className="inline-flex items-center gap-[8px] rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left min-w-[200px]"
+        onClick={() => toggleDropdown("location", isMobile)}
+        className={`inline-flex items-center gap-[8px] ${
+          isMobile 
+            ? 'w-full rounded-full border border-gray-300 p-4' 
+            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]'
+        } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <MapPin className="w-[32px] h-[32px] text-gray-600" strokeWidth={1.5} />
+        <MapPin className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
         <div className="text-[16px] text-gray-700 flex-1">
           <span className="block text-[14px] text-gray-500 font-medium">Location</span>
           <span className="font-semibold text-[16px] text-gray-900">{getLocationDisplay()}</span>
         </div>
       </button>
 
-      {activeDropdown === "location" && (
-        <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+      {((isMobile && activeMobileDropdown === "location") || (!isMobile && activeDropdown === "location")) && (
+        <div className={`${
+          isMobile 
+            ? 'fixed inset-x-0 top-0 bottom-0 bg-white z-50' 
+            : 'absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
+        } overflow-hidden`}>
+          {isMobile && (
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Select Location</h3>
+              <button
+                onClick={() => setActiveMobileDropdown(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          )}
+          
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -189,14 +224,18 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
             </div>
           </div>
 
-          <div className="max-h-72 overflow-y-auto">
+          <div className={`${isMobile ? 'flex-1' : 'max-h-72'} overflow-y-auto`}>
             {/* Any Location Option */}
             <div className="border-b border-gray-100">
               <div className="py-1">
                 <button
                   onClick={() => {
                     updateSearchParam("city", undefined);
-                    setActiveDropdown(null);
+                    if (isMobile) {
+                      setActiveMobileDropdown(null);
+                    } else {
+                      setActiveDropdown(null);
+                    }
                     setLocationSearch("");
                   }}
                   className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
@@ -228,7 +267,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                         key={location.id}
                         onClick={() => {
                           updateSearchParam("city", location.name);
-                          setActiveDropdown(null);
+                          if (isMobile) {
+                            setActiveMobileDropdown(null);
+                          } else {
+                            setActiveDropdown(null);
+                          }
                           setLocationSearch("");
                         }}
                         className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
@@ -257,28 +300,52 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 
-  const PropertyTypeDropdown = () => (
-    <div className="relative dropdown-container">
+  const PropertyTypeDropdown = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
       <button
-        onClick={() => toggleDropdown("propertyType")}
-        className="inline-flex items-center gap-[8px] rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left min-w-[180px]"
+        onClick={() => toggleDropdown("propertyType", isMobile)}
+        className={`inline-flex items-center gap-[8px] ${
+          isMobile 
+            ? 'w-full rounded-full border border-gray-300 p-4' 
+            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[180px]'
+        } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <Home className="w-[32px] h-[32px] text-gray-600" strokeWidth={1.5} />
+        <Home className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
         <div className="text-[16px] text-gray-700 flex-1">
           <span className="block text-[14px] text-gray-500 font-medium">Property Type</span>
           <span className="font-semibold text-[16px] text-gray-900">{getPropertyTypeDisplay()}</span>
         </div>
       </button>
 
-      {activeDropdown === "propertyType" && (
-        <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+      {((isMobile && activeMobileDropdown === "propertyType") || (!isMobile && activeDropdown === "propertyType")) && (
+        <div className={`${
+          isMobile 
+            ? 'fixed inset-0 bg-white z-50' 
+            : 'absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
+        } overflow-hidden`}>
+          {isMobile && (
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Property Type</h3>
+              <button
+                onClick={() => setActiveMobileDropdown(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          )}
+          
           <div className="py-2">
             {PROPERTY_TYPES.map((option) => (
               <button
                 key={option.value}
                 onClick={() => {
                   updateSearchParam("property_type", (option.value as PropertyType) || undefined);
-                  setActiveDropdown(null);
+                  if (isMobile) {
+                    setActiveMobileDropdown(null);
+                  } else {
+                    setActiveDropdown(null);
+                  }
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 flex items-center gap-3 group"
               >
@@ -291,21 +358,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 
-  const PriceDropdown = () => (
-    <div className="relative dropdown-container">
+  const PriceDropdown = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
       <button
-        onClick={() => toggleDropdown("price")}
-        className="inline-flex items-center gap-[8px] rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left min-w-[200px]"
+        onClick={() => toggleDropdown("price", isMobile)}
+        className={`inline-flex items-center gap-[8px] ${
+          isMobile 
+            ? 'w-full rounded-full border border-gray-300 p-4' 
+            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]'
+        } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <DollarSign className="w-[32px] h-[32px] text-gray-600" strokeWidth={1.5} />
+        <DollarSign className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
         <div className="text-[16px] text-gray-700 flex-1">
           <span className="block text-[14px] text-gray-500 font-medium">Price Range</span>
           <span className="font-semibold text-[16px] text-gray-900">{getPriceRangeDisplay()}</span>
         </div>
       </button>
 
-      {activeDropdown === "price" && (
-        <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+      {((isMobile && activeMobileDropdown === "price") || (!isMobile && activeDropdown === "price")) && (
+        <div className={`${
+          isMobile 
+            ? 'fixed inset-0 bg-white z-50' 
+            : 'absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
+        } overflow-hidden`}>
+          {isMobile && (
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Price Range</h3>
+              <button
+                onClick={() => setActiveMobileDropdown(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          )}
+          
           <div className="py-2">
             {PRICE_RANGES.map((range, index) => (
               <button
@@ -313,7 +400,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                 onClick={() => {
                   updateSearchParam("min_price", range.min);
                   updateSearchParam("max_price", range.max);
-                  setActiveDropdown(null);
+                  if (isMobile) {
+                    setActiveMobileDropdown(null);
+                  } else {
+                    setActiveDropdown(null);
+                  }
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 group"
               >
@@ -336,28 +427,52 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 
-  const BedroomsDropdown = () => (
-    <div className="relative dropdown-container">
+  const BedroomsDropdown = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
       <button
-        onClick={() => toggleDropdown("bedrooms")}
-        className="inline-flex items-center gap-[8px] rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left min-w-[160px]"
+        onClick={() => toggleDropdown("bedrooms", isMobile)}
+        className={`inline-flex items-center gap-[8px] ${
+          isMobile 
+            ? 'w-full rounded-full border border-gray-300 p-4' 
+            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[160px]'
+        } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <Expand className="w-[32px] h-[32px] text-gray-600" strokeWidth={1.5} />
+        <Expand className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
         <div className="text-[16px] text-gray-700 flex-1">
           <span className="block text-[14px] text-gray-500 font-medium">Bedrooms</span>
           <span className="font-semibold text-[16px] text-gray-900">{getBedroomsDisplay()}</span>
         </div>
       </button>
 
-      {activeDropdown === "bedrooms" && (
-        <div className="absolute top-full left-0 mt-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+      {((isMobile && activeMobileDropdown === "bedrooms") || (!isMobile && activeDropdown === "bedrooms")) && (
+        <div className={`${
+          isMobile 
+            ? 'fixed inset-0 bg-white z-50' 
+            : 'absolute top-full left-0 mt-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
+        } overflow-hidden`}>
+          {isMobile && (
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Bedrooms</h3>
+              <button
+                onClick={() => setActiveMobileDropdown(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          )}
+          
           <div className="py-2">
             {BEDROOM_OPTIONS.map((option, index) => (
               <button
                 key={index}
                 onClick={() => {
                   updateSearchParam("min_bedrooms", option.min);
-                  setActiveDropdown(null);
+                  if (isMobile) {
+                    setActiveMobileDropdown(null);
+                  } else {
+                    setActiveDropdown(null);
+                  }
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 group"
               >
@@ -370,29 +485,131 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 
-  return (
-    <div className={`search-bar flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] mx-auto relative ${className}`}>
-      <div className="search-bar-items flex items-center justify-between w-full">
-        <div className="search-bar-input-fields gap-[16px] flex items-center">
-          <LocationDropdown />
-          <PropertyTypeDropdown />
-          <PriceDropdown />
-          <BedroomsDropdown />
-        </div>
-        <div className="h-[72px] w-[2px] bg-gray-200 mx-2" />
-        <div className="search-bar-buttons flex items-center gap-2">
+  // Mobile Popup Component
+  const MobileSearchPopup = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+      <div className="bg-white w-full max-h-[90vh] rounded-t-3xl overflow-hidden animate-slide-up">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Search Properties</h2>
           <button
-            className="w-[72px] h-[72px] rounded-full border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
-            aria-label="Advanced Search"
-            onClick={performSearch}
+            onClick={() => setIsMobilePopupOpen(false)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <SlidersHorizontal className="w-[24px] text-gray-600" />
+            <X className="w-6 h-6 text-gray-600" />
           </button>
-          <Button variant="colored" className="search-button" onClick={performSearch}>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            <LocationDropdown isMobile={true} />
+            <PropertyTypeDropdown isMobile={true} />
+            <PriceDropdown isMobile={true} />
+            <BedroomsDropdown isMobile={true} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 bg-white">
+          <div className="flex gap-3">
+            <Button
+              variant="white"
+              onClick={() => {
+                // Reset all filters
+                updateSearchParam("city", undefined);
+                updateSearchParam("property_type", undefined);
+                updateSearchParam("min_price", undefined);
+                updateSearchParam("max_price", undefined);
+                updateSearchParam("min_bedrooms", undefined);
+              }}
+              className="flex-1"
+            >
+              Clear All
+            </Button>
+            <Button
+              variant="colored"
+              onClick={handleMobileSearch}
+              className="flex-1"
+            >
+              Search Properties
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mx-auto">
+      {/* Desktop Search Bar */}
+      <div className={`search-bar hidden lg:flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] relative ${className}`}>
+        <div className="search-bar-items flex items-center justify-between w-full">
+          <div className="search-bar-input-fields gap-[16px] flex items-center">
+            <LocationDropdown />
+            <PropertyTypeDropdown />
+            <PriceDropdown />
+            <BedroomsDropdown />
+          </div>
+          <div className="h-[72px] w-[2px] bg-gray-200 mx-2" />
+          <div className="search-bar-buttons flex items-center gap-2">
+            <button
+              className="w-[72px] h-[72px] rounded-full border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+              aria-label="Advanced Search"
+              onClick={performSearch}
+            >
+              <SlidersHorizontal className="w-[24px] text-gray-600" />
+            </button>
+            <Button variant="colored" className="search-button" onClick={performSearch}>
+              Search
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tablet Search Bar */}
+      <div className={`search-bar hidden md:flex lg:hidden items-center justify-between p-[16px] max-w-[800px] mx-auto relative ${className}`}>
+        <div className="search-bar-items flex items-center justify-between w-full">
+          <div className="search-bar-input-fields gap-[12px] flex items-center flex-wrap">
+            <LocationDropdown />
+            <PropertyTypeDropdown />
+            <PriceDropdown />
+            <BedroomsDropdown />
+          </div>
+          <Button variant="colored" className="search-button ml-4" onClick={performSearch}>
             Search
           </Button>
         </div>
       </div>
+
+      {/* Mobile Search Button */}
+      <div className="md:hidden px-4">
+        <button
+          onClick={() => setIsMobilePopupOpen(true)}
+          className="mobile-search w-full max-w-[400px] mx-auto border-gray-300 p-[20px] border-[2px] rounded-full flex items-center justify-center gap-4 text-center relative bg-white shadow-md hover:shadow-xl transition-all duration-300 active:scale-[0.98]"
+        >
+          <span className="text-gray-700 font-medium">Start Your Search</span>
+          <Search className="w-[24px] text-gray-600" />
+        </button>
+      </div>
+
+      {/* Mobile Search Popup */}
+      {isMobilePopupOpen && <MobileSearchPopup />}
+
+      {/* Add CSS for slide-up animation */}
+      <style>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
