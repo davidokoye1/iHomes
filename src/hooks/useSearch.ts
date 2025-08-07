@@ -8,10 +8,29 @@ export const useSearch = () => {
   const navigate = useNavigate();
 
   const updateSearchParam = useCallback((key: keyof SearchParams, value: string | number | string[] | boolean | null | undefined) => {
-    setSearchParams(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setSearchParams(prev => {
+      // For min_price and max_price, we need to handle them together
+      if (key === 'min_price' || key === 'max_price') {
+        // Convert string values to numbers where possible
+        if (typeof value === 'string' && value.trim() !== '') {
+          const numValue = parseFloat(value);
+          value = isNaN(numValue) ? null : numValue;
+        }
+        // Ensure value is either number, null, or undefined
+        if (typeof value === 'number' || value === null || value === undefined) {
+          return {
+            ...prev,
+            min_price: key === 'min_price' ? value : prev.min_price,
+            max_price: key === 'max_price' ? value : prev.max_price
+          };
+        }
+        return prev; // Ignore invalid types
+      }
+      return {
+        ...prev,
+        [key]: value
+      };
+    });
   }, []);
 
   const toggleArrayParam = useCallback((key: keyof SearchParams, value: string) => {

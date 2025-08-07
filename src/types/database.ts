@@ -270,8 +270,8 @@ export interface SearchParams {
   search_text?: string;
   property_type?: PropertyType;
   listing_type?: ListingType;
-  min_price?: number;
-  max_price?: number;
+  min_price?: number | string | null;
+  max_price?: number | string | null;
   min_bedrooms?: number;
   max_bedrooms?: number;
   min_bathrooms?: number;

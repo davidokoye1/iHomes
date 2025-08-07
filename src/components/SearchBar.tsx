@@ -56,6 +56,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const [locationSearch, setLocationSearch] = useState("");
   const [isMobilePopupOpen, setIsMobilePopupOpen] = useState(false);
   const [activeMobileDropdown, setActiveMobileDropdown] = useState<string | null>(null);
+  const [combinedSearch, setCombinedSearch] = useState("");
   
   // Database-driven state
   const [locations, setLocations] = useState<Location[]>([]);
@@ -114,6 +115,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     setIsMobilePopupOpen(false);
     performSearch();
   };
+  
+  const handleCombinedSearch = () => {
+    const parsed = parseCombinedSearch(combinedSearch);
+    
+    // Update search params with parsed values
+    if (parsed.city) updateSearchParam('city', parsed.city);
+    if (parsed.min_bedrooms !== undefined) updateSearchParam('min_bedrooms', parsed.min_bedrooms);
+    if (parsed.min_price !== undefined) updateSearchParam('min_price', parsed.min_price);
+    if (parsed.max_price !== undefined) updateSearchParam('max_price', parsed.max_price);
+    
+    performSearch();
+    setCombinedSearch('');
+  };
 
   // Display functions
   const getLocationDisplay = () => {
@@ -168,9 +182,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   if (loading) {
     return (
-      <div className={`search-bar flex items-center justify-center p-[20px] max-w-[1314px] max-h-[111px] mx-auto relative ${className}`}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+     
+        <div className="mx-auto animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+   
     );
   }
 
@@ -545,7 +559,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       {/* Desktop Search Bar */}
       <div className={`search-bar hidden lg:flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] relative ${className}`}>
         <div className="search-bar-items flex items-center justify-between w-full">
-          <div className="search-bar-input-fields gap-[16px] flex items-center">
+          <div className="search-bar-input-fields gap-[16px] flex items-center flex-1">
+           
             <LocationDropdown />
             <PropertyTypeDropdown />
             <PriceDropdown />
@@ -584,13 +599,23 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
       {/* Mobile Search Button */}
       <div className="md:hidden px-4">
-        <button
-          onClick={() => setIsMobilePopupOpen(true)}
-          className="mobile-search w-full max-w-[400px] mx-auto border-gray-300 p-[20px] border-[2px] rounded-full flex items-center justify-center gap-4 text-center relative bg-white shadow-md hover:shadow-xl transition-all duration-300 active:scale-[0.98]"
-        >
-          <span className="text-gray-700 font-medium">Start Your Search</span>
-          <Search className="w-[24px] text-gray-600" />
-        </button>
+        <div className="relative w-full max-w-[400px] mx-auto">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Try '2 bed in Banjul under $500'"
+            value={combinedSearch}
+            onChange={(e) => setCombinedSearch(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleCombinedSearch()}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+          />
+          <button
+            onClick={() => setIsMobilePopupOpen(true)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 text-gray-600"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Mobile Search Popup */}
@@ -613,5 +638,35 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 };
+
+// Combined search parser
+function parseCombinedSearch(searchText: string) {
+  const result: {
+    city?: string;
+    min_bedrooms?: number;
+    min_price?: number;
+    max_price?: number;
+  } = {};
+  
+  // Extract bedroom count
+  const bedroomMatch = searchText.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms)\b/i);
+  if (bedroomMatch) {
+    result.min_bedrooms = parseInt(bedroomMatch[1], 10);
+  }
+  
+  // Extract price range
+  const priceMatch = searchText.match(/\b(under|below|less than)\s*\$?\s*(\d+)\b/i);
+  if (priceMatch) {
+    result.max_price = parseInt(priceMatch[2], 10);
+  }
+  
+  // Extract location
+  const locationMatch = searchText.match(/\b(in|at)\s+([a-zA-Z\s]+)\b/i);
+  if (locationMatch) {
+    result.city = locationMatch[2].trim();
+  }
+  
+  return result;
+}
 
 export default SearchBar;
