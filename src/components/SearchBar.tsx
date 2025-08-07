@@ -1,6 +1,14 @@
 // src/components/SearchBar.tsx - Enhanced with Database Integration
 import { useState, useEffect } from "react";
-import { MapPin, Home, DollarSign, Expand, SlidersHorizontal, Search, X } from "lucide-react";
+import {
+  MapPin,
+  Home,
+  DollarSign,
+  Expand,
+  SlidersHorizontal,
+  Search,
+  X,
+} from "lucide-react";
 import Button from "./Button";
 import { useSearch } from "../hooks/useSearch";
 import { PropertiesService } from "../services/properties";
@@ -55,9 +63,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
   const [isMobilePopupOpen, setIsMobilePopupOpen] = useState(false);
-  const [activeMobileDropdown, setActiveMobileDropdown] = useState<string | null>(null);
-  const [combinedSearch, setCombinedSearch] = useState("");
-  
+  const [activeMobileDropdown, setActiveMobileDropdown] = useState<
+    string | null
+  >(null);
+
   // Database-driven state
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +78,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
         const locationsData = await PropertiesService.getLocations();
         setLocations(locationsData);
       } catch (error) {
-        console.error('Error loading search data:', error);
+        console.error("Error loading search data:", error);
       } finally {
         setLoading(false);
       }
@@ -82,30 +91,32 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.dropdown-container')) {
+      if (!target.closest(".dropdown-container")) {
         setActiveDropdown(null);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   // Prevent body scroll when mobile popup is open
   useEffect(() => {
     if (isMobilePopupOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobilePopupOpen]);
 
   const toggleDropdown = (dropdown: string, isMobile = false) => {
     if (isMobile) {
-      setActiveMobileDropdown(activeMobileDropdown === dropdown ? null : dropdown);
+      setActiveMobileDropdown(
+        activeMobileDropdown === dropdown ? null : dropdown
+      );
     } else {
       setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
     }
@@ -115,24 +126,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     setIsMobilePopupOpen(false);
     performSearch();
   };
-  
-  const handleCombinedSearch = () => {
-    const parsed = parseCombinedSearch(combinedSearch);
-    
-    // Update search params with parsed values
-    if (parsed.city) updateSearchParam('city', parsed.city);
-    if (parsed.min_bedrooms !== undefined) updateSearchParam('min_bedrooms', parsed.min_bedrooms);
-    if (parsed.min_price !== undefined) updateSearchParam('min_price', parsed.min_price);
-    if (parsed.max_price !== undefined) updateSearchParam('max_price', parsed.max_price);
-    
-    performSearch();
-    setCombinedSearch('');
-  };
 
   // Display functions
   const getLocationDisplay = () => {
     if (searchParams.city) {
-      const location = locations.find(loc => loc.name === searchParams.city);
+      const location = locations.find((loc) => loc.name === searchParams.city);
       return location ? `${location.name}, GM` : `${searchParams.city}, GM`;
     }
     return "Any Location, GM";
@@ -140,20 +138,28 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   const getPropertyTypeDisplay = () => {
     if (!searchParams.property_type) return "All Types";
-    const type = PROPERTY_TYPES.find(t => t.value === searchParams.property_type);
-    return type ? type.label : searchParams.property_type.charAt(0).toUpperCase() + searchParams.property_type.slice(1);
+    const type = PROPERTY_TYPES.find(
+      (t) => t.value === searchParams.property_type
+    );
+    return type
+      ? type.label
+      : searchParams.property_type.charAt(0).toUpperCase() +
+          searchParams.property_type.slice(1);
   };
 
   const getPriceRangeDisplay = () => {
     const range = PRICE_RANGES.find(
-      (r) => r.min === searchParams.min_price && r.max === searchParams.max_price
+      (r) =>
+        r.min === searchParams.min_price && r.max === searchParams.max_price
     );
     return range ? range.label : "Any Price";
   };
 
   const getBedroomsDisplay = () => {
     if (!searchParams.min_bedrooms) return "Any Bedrooms";
-    const option = BEDROOM_OPTIONS.find((o) => o.min === searchParams.min_bedrooms);
+    const option = BEDROOM_OPTIONS.find(
+      (o) => o.min === searchParams.min_bedrooms
+    );
     return option ? option.label : `${searchParams.min_bedrooms}+ Bedrooms`;
   };
 
@@ -165,16 +171,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   );
 
   // Group locations by region
-  const groupedLocations = filteredLocations.reduce((acc, location) => {
-    if (!acc[location.region]) acc[location.region] = [];
-    acc[location.region].push(location);
-    return acc;
-  }, {} as Record<string, Location[]>);
+  const groupedLocations = filteredLocations.reduce(
+    (acc, location) => {
+      if (!acc[location.region]) acc[location.region] = [];
+      acc[location.region].push(location);
+      return acc;
+    },
+    {} as Record<string, Location[]>
+  );
 
   // Sort regions to show popular locations first
   const sortedRegions = Object.keys(groupedLocations).sort((a, b) => {
-    const aHasPopular = groupedLocations[a].some(loc => loc.is_popular);
-    const bHasPopular = groupedLocations[b].some(loc => loc.is_popular);
+    const aHasPopular = groupedLocations[a].some((loc) => loc.is_popular);
+    const bHasPopular = groupedLocations[b].some((loc) => loc.is_popular);
     if (aHasPopular && !bHasPopular) return -1;
     if (!aHasPopular && bHasPopular) return 1;
     return a.localeCompare(b);
@@ -182,39 +191,51 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   if (loading) {
     return (
-     
-        <div className="mx-auto animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-   
+      <div className="flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
     );
   }
 
   // Dropdown components
   const LocationDropdown = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
+    <div className={`${isMobile ? "w-full" : "relative dropdown-container"}`}>
       <button
         onClick={() => toggleDropdown("location", isMobile)}
         className={`inline-flex items-center gap-[8px] ${
-          isMobile 
-            ? 'w-full rounded-full border border-gray-300 p-4' 
-            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]'
+          isMobile
+            ? "w-full rounded-full border border-gray-300 p-4"
+            : "rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]"
         } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <MapPin className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
+        <MapPin
+          className={`${isMobile ? "w-6 h-6" : "w-[32px] h-[32px]"} text-gray-600`}
+          strokeWidth={1.5}
+        />
         <div className="text-[16px] text-gray-700 flex-1">
-          <span className="block text-[14px] text-gray-500 font-medium">Location</span>
-          <span className="font-semibold text-[16px] text-gray-900">{getLocationDisplay()}</span>
+          <span className="block text-[14px] text-gray-500 font-medium">
+            Location
+          </span>
+          <span className="font-semibold text-[16px] text-gray-900">
+            {getLocationDisplay()}
+          </span>
         </div>
       </button>
 
-      {((isMobile && activeMobileDropdown === "location") || (!isMobile && activeDropdown === "location")) && (
-        <div className={`${
-          isMobile 
-            ? 'fixed inset-x-0 top-0 bottom-0 bg-white z-50' 
-            : 'absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
-        } overflow-hidden`}>
+      {((isMobile && activeMobileDropdown === "location") ||
+        (!isMobile && activeDropdown === "location")) && (
+        <div
+          className={`${
+            isMobile
+              ? "fixed inset-x-0 top-0 bottom-0 bg-white z-50"
+              : "absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-xl z-50"
+          } overflow-hidden`}
+        >
           {isMobile && (
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Select Location</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Select Location
+              </h3>
               <button
                 onClick={() => setActiveMobileDropdown(null)}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -223,7 +244,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               </button>
             </div>
           )}
-          
+
           <div className="p-4 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -238,7 +259,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
             </div>
           </div>
 
-          <div className={`${isMobile ? 'flex-1' : 'max-h-72'} overflow-y-auto`}>
+          <div
+            className={`${isMobile ? "flex-1" : "max-h-72"} overflow-y-auto`}
+          >
             {/* Any Location Option */}
             <div className="border-b border-gray-100">
               <div className="py-1">
@@ -255,15 +278,22 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                   className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-150 flex items-center justify-between group"
                 >
                   <div>
-                    <div className="font-medium text-gray-900 group-hover:text-green-700">Any Location</div>
-                    <div className="text-sm text-gray-500">Search all areas</div>
+                    <div className="font-medium text-gray-900 group-hover:text-green-700">
+                      Any Location
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Search all areas
+                    </div>
                   </div>
                 </button>
               </div>
             </div>
 
             {sortedRegions.map((region) => (
-              <div key={region} className="border-b border-gray-100 last:border-b-0">
+              <div
+                key={region}
+                className="border-b border-gray-100 last:border-b-0"
+              >
                 <div className="px-4 py-2 bg-gray-50">
                   <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     {region.replace("REGION", "").trim()}
@@ -301,7 +331,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">{location.type}</div>
+                          <div className="text-sm text-gray-500">
+                            {location.type}
+                          </div>
                         </div>
                       </button>
                     ))}
@@ -315,31 +347,43 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   );
 
   const PropertyTypeDropdown = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
+    <div className={`${isMobile ? "w-full" : "relative dropdown-container"}`}>
       <button
         onClick={() => toggleDropdown("propertyType", isMobile)}
         className={`inline-flex items-center gap-[8px] ${
-          isMobile 
-            ? 'w-full rounded-full border border-gray-300 p-4' 
-            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[180px]'
+          isMobile
+            ? "w-full rounded-full border border-gray-300 p-4"
+            : "rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[180px]"
         } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <Home className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
+        <Home
+          className={`${isMobile ? "w-6 h-6" : "w-[32px] h-[32px]"} text-gray-600`}
+          strokeWidth={1.5}
+        />
         <div className="text-[16px] text-gray-700 flex-1">
-          <span className="block text-[14px] text-gray-500 font-medium">Property Type</span>
-          <span className="font-semibold text-[16px] text-gray-900">{getPropertyTypeDisplay()}</span>
+          <span className="block text-[14px] text-gray-500 font-medium">
+            Property Type
+          </span>
+          <span className="font-semibold text-[16px] text-gray-900">
+            {getPropertyTypeDisplay()}
+          </span>
         </div>
       </button>
 
-      {((isMobile && activeMobileDropdown === "propertyType") || (!isMobile && activeDropdown === "propertyType")) && (
-        <div className={`${
-          isMobile 
-            ? 'fixed inset-0 bg-white z-50' 
-            : 'absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
-        } overflow-hidden`}>
+      {((isMobile && activeMobileDropdown === "propertyType") ||
+        (!isMobile && activeDropdown === "propertyType")) && (
+        <div
+          className={`${
+            isMobile
+              ? "fixed inset-0 bg-white z-50"
+              : "absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50"
+          } overflow-hidden`}
+        >
           {isMobile && (
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Property Type</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Property Type
+              </h3>
               <button
                 onClick={() => setActiveMobileDropdown(null)}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -348,13 +392,16 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               </button>
             </div>
           )}
-          
+
           <div className="py-2">
             {PROPERTY_TYPES.map((option) => (
               <button
                 key={option.value}
                 onClick={() => {
-                  updateSearchParam("property_type", (option.value as PropertyType) || undefined);
+                  updateSearchParam(
+                    "property_type",
+                    (option.value as PropertyType) || undefined
+                  );
                   if (isMobile) {
                     setActiveMobileDropdown(null);
                   } else {
@@ -363,7 +410,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 flex items-center gap-3 group"
               >
-                <span className="font-medium group-hover:text-green-700">{option.label}</span>
+                <span className="font-medium group-hover:text-green-700">
+                  {option.label}
+                </span>
               </button>
             ))}
           </div>
@@ -373,31 +422,43 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   );
 
   const PriceDropdown = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
+    <div className={`${isMobile ? "w-full" : "relative dropdown-container"}`}>
       <button
         onClick={() => toggleDropdown("price", isMobile)}
         className={`inline-flex items-center gap-[8px] ${
-          isMobile 
-            ? 'w-full rounded-full border border-gray-300 p-4' 
-            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]'
+          isMobile
+            ? "w-full rounded-full border border-gray-300 p-4"
+            : "rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[200px]"
         } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <DollarSign className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
+        <DollarSign
+          className={`${isMobile ? "w-6 h-6" : "w-[32px] h-[32px]"} text-gray-600`}
+          strokeWidth={1.5}
+        />
         <div className="text-[16px] text-gray-700 flex-1">
-          <span className="block text-[14px] text-gray-500 font-medium">Price Range</span>
-          <span className="font-semibold text-[16px] text-gray-900">{getPriceRangeDisplay()}</span>
+          <span className="block text-[14px] text-gray-500 font-medium">
+            Price Range
+          </span>
+          <span className="font-semibold text-[16px] text-gray-900">
+            {getPriceRangeDisplay()}
+          </span>
         </div>
       </button>
 
-      {((isMobile && activeMobileDropdown === "price") || (!isMobile && activeDropdown === "price")) && (
-        <div className={`${
-          isMobile 
-            ? 'fixed inset-0 bg-white z-50' 
-            : 'absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
-        } overflow-hidden`}>
+      {((isMobile && activeMobileDropdown === "price") ||
+        (!isMobile && activeDropdown === "price")) && (
+        <div
+          className={`${
+            isMobile
+              ? "fixed inset-0 bg-white z-50"
+              : "absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50"
+          } overflow-hidden`}
+        >
           {isMobile && (
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Price Range</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Price Range
+              </h3>
               <button
                 onClick={() => setActiveMobileDropdown(null)}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -406,7 +467,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               </button>
             </div>
           )}
-          
+
           <div className="py-2">
             {PRICE_RANGES.map((range, index) => (
               <button
@@ -422,15 +483,16 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 group"
               >
-                <div className="font-semibold text-gray-900 group-hover:text-green-700">{range.label}</div>
+                <div className="font-semibold text-gray-900 group-hover:text-green-700">
+                  {range.label}
+                </div>
                 {range.min || range.max ? (
                   <div className="text-sm text-gray-500 mt-1">
                     {range.min && range.max
                       ? `D${range.min.toLocaleString()} - D${range.max.toLocaleString()}`
                       : range.min
-                      ? `From D${range.min.toLocaleString()}`
-                      : `Up to D${range.max?.toLocaleString()}`
-                    }
+                        ? `From D${range.min.toLocaleString()}`
+                        : `Up to D${range.max?.toLocaleString()}`}
                   </div>
                 ) : null}
               </button>
@@ -442,28 +504,38 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   );
 
   const BedroomsDropdown = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'w-full' : 'relative dropdown-container'}`}>
+    <div className={`${isMobile ? "w-full" : "relative dropdown-container"}`}>
       <button
         onClick={() => toggleDropdown("bedrooms", isMobile)}
         className={`inline-flex items-center gap-[8px] ${
-          isMobile 
-            ? 'w-full rounded-full border border-gray-300 p-4' 
-            : 'rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[160px]'
+          isMobile
+            ? "w-full rounded-full border border-gray-300 p-4"
+            : "rounded-full border border-gray-300 pl-[32px] pr-[48px] py-[11px] min-w-[160px]"
         } bg-white hover:shadow-lg hover:border-gray-400 transition-all duration-200 text-left`}
       >
-        <Expand className={`${isMobile ? 'w-6 h-6' : 'w-[32px] h-[32px]'} text-gray-600`} strokeWidth={1.5} />
+        <Expand
+          className={`${isMobile ? "w-6 h-6" : "w-[32px] h-[32px]"} text-gray-600`}
+          strokeWidth={1.5}
+        />
         <div className="text-[16px] text-gray-700 flex-1">
-          <span className="block text-[14px] text-gray-500 font-medium">Bedrooms</span>
-          <span className="font-semibold text-[16px] text-gray-900">{getBedroomsDisplay()}</span>
+          <span className="block text-[14px] text-gray-500 font-medium">
+            Bedrooms
+          </span>
+          <span className="font-semibold text-[16px] text-gray-900">
+            {getBedroomsDisplay()}
+          </span>
         </div>
       </button>
 
-      {((isMobile && activeMobileDropdown === "bedrooms") || (!isMobile && activeDropdown === "bedrooms")) && (
-        <div className={`${
-          isMobile 
-            ? 'fixed inset-0 bg-white z-50' 
-            : 'absolute top-full left-0 mt-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-xl z-50'
-        } overflow-hidden`}>
+      {((isMobile && activeMobileDropdown === "bedrooms") ||
+        (!isMobile && activeDropdown === "bedrooms")) && (
+        <div
+          className={`${
+            isMobile
+              ? "fixed inset-0 bg-white z-50"
+              : "absolute top-full left-0 mt-2 w-52 bg-white border border-gray-200 rounded-2xl shadow-xl z-50"
+          } overflow-hidden`}
+        >
           {isMobile && (
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Bedrooms</h3>
@@ -475,7 +547,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               </button>
             </div>
           )}
-          
+
           <div className="py-2">
             {BEDROOM_OPTIONS.map((option, index) => (
               <button
@@ -490,7 +562,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
                 }}
                 className="w-full text-left px-4 py-3 hover:bg-green-50 text-gray-700 transition-colors duration-150 group"
               >
-                <div className="font-semibold text-gray-900 group-hover:text-green-700">{option.label}</div>
+                <div className="font-semibold text-gray-900 group-hover:text-green-700">
+                  {option.label}
+                </div>
               </button>
             ))}
           </div>
@@ -505,7 +579,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       <div className="bg-white w-full max-h-[90vh] rounded-t-3xl overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Search Properties</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Search Properties
+          </h2>
           <button
             onClick={() => setIsMobilePopupOpen(false)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -557,10 +633,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   return (
     <div className="mx-auto">
       {/* Desktop Search Bar */}
-      <div className={`search-bar hidden lg:flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] relative ${className}`}>
+      <div
+        className={`search-bar hidden lg:flex items-center justify-between p-[20px] max-w-[1314px] max-h-[111px] relative ${className}`}
+      >
         <div className="search-bar-items flex items-center justify-between w-full">
-          <div className="search-bar-input-fields gap-[16px] flex items-center flex-1">
-           
+          <div className="search-bar-input-fields gap-[16px] flex items-center">
             <LocationDropdown />
             <PropertyTypeDropdown />
             <PriceDropdown />
@@ -575,7 +652,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
             >
               <SlidersHorizontal className="w-[24px] text-gray-600" />
             </button>
-            <Button variant="colored" className="search-button" onClick={performSearch}>
+            <Button
+              variant="colored"
+              className="search-button"
+              onClick={performSearch}
+            >
               Search
             </Button>
           </div>
@@ -583,7 +664,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       </div>
 
       {/* Tablet Search Bar */}
-      <div className={`search-bar hidden md:flex lg:hidden items-center justify-between p-[16px] max-w-[800px] mx-auto relative ${className}`}>
+      <div
+        className={`search-bar hidden md:flex lg:hidden items-center justify-between p-[16px] max-w-[800px] mx-auto relative ${className}`}
+      >
         <div className="search-bar-items flex items-center justify-between w-full">
           <div className="search-bar-input-fields gap-[12px] flex items-center flex-wrap">
             <LocationDropdown />
@@ -591,7 +674,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
             <PriceDropdown />
             <BedroomsDropdown />
           </div>
-          <Button variant="colored" className="search-button ml-4" onClick={performSearch}>
+          <Button
+            variant="colored"
+            className="search-button ml-4"
+            onClick={performSearch}
+          >
             Search
           </Button>
         </div>
@@ -599,23 +686,13 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
       {/* Mobile Search Button */}
       <div className="md:hidden px-4">
-        <div className="relative w-full max-w-[400px] mx-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Try '2 bed in Banjul under $500'"
-            value={combinedSearch}
-            onChange={(e) => setCombinedSearch(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCombinedSearch()}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-          />
-          <button
-            onClick={() => setIsMobilePopupOpen(true)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 text-gray-600"
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={() => setIsMobilePopupOpen(true)}
+          className="mobile-search w-full max-w-[250px] mx-auto border-gray-300 p-[20px] border-[2px] rounded-full flex items-center justify-center gap-4 text-center relative bg-white shadow-md hover:shadow-xl transition-all duration-300 active:scale-[0.98]"
+        >
+          <span className="text-gray-700 font-medium">Start Your Search</span>
+          <Search className="w-[24px] text-gray-600" />
+        </button>
       </div>
 
       {/* Mobile Search Popup */}
@@ -638,35 +715,5 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     </div>
   );
 };
-
-// Combined search parser
-function parseCombinedSearch(searchText: string) {
-  const result: {
-    city?: string;
-    min_bedrooms?: number;
-    min_price?: number;
-    max_price?: number;
-  } = {};
-  
-  // Extract bedroom count
-  const bedroomMatch = searchText.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms)\b/i);
-  if (bedroomMatch) {
-    result.min_bedrooms = parseInt(bedroomMatch[1], 10);
-  }
-  
-  // Extract price range
-  const priceMatch = searchText.match(/\b(under|below|less than)\s*\$?\s*(\d+)\b/i);
-  if (priceMatch) {
-    result.max_price = parseInt(priceMatch[2], 10);
-  }
-  
-  // Extract location
-  const locationMatch = searchText.match(/\b(in|at)\s+([a-zA-Z\s]+)\b/i);
-  if (locationMatch) {
-    result.city = locationMatch[2].trim();
-  }
-  
-  return result;
-}
 
 export default SearchBar;
